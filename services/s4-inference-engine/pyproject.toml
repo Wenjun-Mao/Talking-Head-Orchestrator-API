@@ -1,0 +1,15 @@
+[project]
+name = "inference-engine"
+version = "0.1.0"
+description = "Core animation engine placeholder"
+requires-python = ">=3.12"
+dependencies = [
+  "dramatiq[rabbitmq]>=1.17.0",
+  "loguru>=0.7.2",
+  "pydantic>=2.7.0",
+  "pydantic-settings>=2.2.1",
+]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"

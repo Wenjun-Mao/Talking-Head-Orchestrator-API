@@ -49,6 +49,17 @@ services:
       - tts_api_token
       - debug_log_payload
 
+  s4-inference-engine:
+    build:
+      context: ../../services/s4-inference-engine
+    volumes:
+      - ../../data:/data
+    # profiles:
+    #   - s4
+    secrets:
+      - rabbitmq_url
+      - debug_log_payload
+
   s5-broll-selector:
     build:
       context: ../../services/s5-broll-selector

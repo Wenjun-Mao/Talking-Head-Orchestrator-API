@@ -162,7 +162,7 @@ def process(
             record_id,
         )
 
-        # Step 3: Enqueue for downstream (s4-sadtalker)
+        # Step 3: Enqueue for downstream (s4-inference-engine)
         _enqueue_downstream(
             settings,
             record_id=record_id,

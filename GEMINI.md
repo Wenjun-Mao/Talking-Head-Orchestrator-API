@@ -1,7 +1,7 @@
-# SadTalker-API Project Context
+# Talking-Head-Orchestrator-API Project Context
 
 ## Overview
-**SadTalker-API** is a microservices-based pipeline designed to automate the generation of talking-head videos. It wraps the core SadTalker algorithm (for 3D audio-driven face animation) into a scalable, asynchronous workflow triggered by NocoDB records.
+**Talking-Head-Orchestrator-API** is a microservices-based pipeline designed to automate the generation of talking-head videos. It provides a scalable, asynchronous workflow triggered by NocoDB records.
 
 ## Architecture
 The system follows a sequential pipeline architecture where a single job (identified by a `record_id`) is passed through multiple specialized stages.
@@ -14,7 +14,7 @@ The system follows a sequential pipeline architecture where a single job (identi
 1.  **s1-ingest-nocodb:** Ingests trigger from NocoDB, initializes the job.
 2.  **s2-download-mp4:** Downloads the source video (e.g., from Douyin).
 3.  **s3-tts-voice:** Generates audio speech from text.
-4.  **s4-sadtalker:** (Legacy Core) Generates the talking head animation using the audio and source image.
+4.  **s4-inference-engine:** (Placeholder) Generates the talking head animation using the audio and source image.
 5.  **s5-broll-selector:** Selects background/B-roll footage.
 6.  **s6-video-compositor:** Composites the avatar, background, and audio.
 7.  **s7-storage-uploader:** Uploads the final result to storage.
@@ -28,7 +28,7 @@ Each service is independently deployable and manages its own dependencies.
 *   `s1-ingest-nocodb`: Webhook entry point (FastAPI).
 *   `s2-download-mp4`: Video downloader worker.
 *   `s3-tts-voice`: Text-to-Speech worker.
-*   `s4-sadtalker`: Core SadTalker implementation (Legacy structure, uses `requirements.txt`).
+*   `s4-inference-engine`: Core animation engine (currently being refactored).
 *   `s5-broll-selector`: B-roll selection logic.
 *   `s6-video-compositor`: FFmpeg-based composition.
 *   `s7-storage-uploader`: Cloud storage interface.
@@ -50,7 +50,7 @@ Infrastructure configuration.
 
 *   **Best Practices First:** Always implement the most robust, idiomatic, and maintainable solution from the start. Avoid "quick fixes" that compromise code integrity or architectural clarity.
 *   **Modern Code Style:** The project uses modern Python (3.12+) and library (SQLAlchemy 2.0, Pydantic v2) features. This includes using `list` and `|` for typing instead of `typing.List` and `typing.Optional`.
-*   **Package Management:** Modern services (non-s4) use `uv` for fast dependency management and virtual environments. `s4` uses standard `pip` and `requirements.txt`.
+*   **Package Management:** Modern services use `uv` for fast dependency management and virtual environments.
 *   **Settings:** 
     *   Use `pydantic-settings` via `BaseSettings`.
     *   Prioritize Docker secrets (`/run/secrets`) > Environment variables > Defaults.
@@ -93,4 +93,3 @@ docker-compose -f infra/docker-compose/docker-compose.yml build s1-ingest-nocodb
 
 ## Setup Notes
 *   **Secrets:** For local development, copy `.env.example` to `.env` in the root or service directory. Docker Compose maps files from `infra/docker-compose/secrets/` to the containers.
-*   **Legacy Service:** `s4-sadtalker` requires a specific environment setup (Python 3.10 + PyTorch) often managed via `launcher.py` or its specific Dockerfile.

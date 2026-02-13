@@ -1,7 +1,7 @@
 Quick service launch guide
 
 General
-- Each non-SadTalker service uses uv and has its own pyproject.toml.
+- Each modern service uses uv and has its own pyproject.toml.
 - Run commands from the service directory.
 - Configure secrets via Docker secrets in production or .env for local dev.
 
@@ -19,7 +19,7 @@ s1-ingest-nocodb
 Other services
 - s2-download-mp4
 - s3-tts-voice
-- s4-sadtalker (legacy SadTalker service)
+- s4-inference-engine (core animation service)
 - s5-broll-selector
 - s6-video-compositor
 - s7-storage-uploader

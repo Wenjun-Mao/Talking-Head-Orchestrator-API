@@ -43,12 +43,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("S3_REQUEST_TIMEOUT_S", "request_timeout_s"),
     )
     downstream_queue: str = Field(
-        "s4-sadtalker",
+        "s4-inference-engine",
         description="Dramatiq queue for downstream service",
         validation_alias=AliasChoices("S3_DOWNSTREAM_QUEUE", "downstream_queue"),
     )
     downstream_actor: str = Field(
-        "s4_sadtalker.process",
+        "s4_inference_engine.process",
         description="Dramatiq actor name for downstream service",
         validation_alias=AliasChoices("S3_DOWNSTREAM_ACTOR", "downstream_actor"),
     )
