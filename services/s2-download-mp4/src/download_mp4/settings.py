@@ -42,6 +42,15 @@ class Settings(BaseSettings):
         description="HTTP request timeout in seconds",
         validation_alias=AliasChoices("S2_REQUEST_TIMEOUT_S", "request_timeout_s"),
     )
+    current_queue: str = Field(
+        "s2-download-mp4",
+        description="Dramatiq queue consumed by this service",
+        validation_alias=AliasChoices(
+            "S2_CURRENT_QUEUE",
+            "S2_QUEUE",
+            "current_queue",
+        ),
+    )
     downstream_queue: str = Field(
         "s3-tts-voice",
         description="Dramatiq queue for downstream service",

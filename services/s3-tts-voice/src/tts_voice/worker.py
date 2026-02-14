@@ -19,10 +19,16 @@ settings = get_settings()
 _url_parts = settings.rabbitmq_url.split("@")
 _masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
 
-logger.info(f"Initializing s3-tts-voice worker (broker={_masked_url}, queue={settings.downstream_queue})")
+logger.info(
+    "Initializing s3-tts-voice worker (broker={}, current_queue={}, downstream_queue={})",
+    _masked_url,
+    settings.current_queue,
+    settings.downstream_queue,
+)
 
 broker = RabbitmqBroker(url=settings.rabbitmq_url)
 dramatiq.set_broker(broker)
+broker.declare_queue(settings.current_queue, ensure=True)
 
 
 def _request_tts_url(settings: Any, text: str) -> str:
@@ -118,14 +124,14 @@ def _enqueue_downstream(
     broker.enqueue(message)
 
 
-@dramatiq.actor(actor_name="s3_tts_voice.ping", queue_name="s3-tts-voice")
+@dramatiq.actor(actor_name="s3_tts_voice.ping", queue_name=settings.current_queue)
 def ping() -> None:
     logger.info("PONG! s3-tts-voice worker is alive and reachable.")
 
 
 @dramatiq.actor(
     actor_name="s3_tts_voice.process",
-    queue_name="s3-tts-voice",
+    queue_name=settings.current_queue,
 )
 def process(
     record_id: int,

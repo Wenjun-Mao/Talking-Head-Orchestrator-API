@@ -22,10 +22,16 @@ settings = get_settings()
 _url_parts = settings.rabbitmq_url.split("@")
 _masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
 
-logger.info(f"Initializing s2-download-mp4 worker (broker={_masked_url}, queue={settings.downstream_queue})")
+logger.info(
+    "Initializing s2-download-mp4 worker (broker={}, current_queue={}, downstream_queue={})",
+    _masked_url,
+    settings.current_queue,
+    settings.downstream_queue,
+)
 
 broker = RabbitmqBroker(url=settings.rabbitmq_url)
 dramatiq.set_broker(broker)
+broker.declare_queue(settings.current_queue, ensure=True)
 
 
 def _extract_douyin_download_url(payload: dict[str, Any]) -> Optional[str]:
@@ -111,14 +117,14 @@ def _enqueue_downstream(
     broker.enqueue(message)
 
 
-@dramatiq.actor(actor_name="s2_download_mp4.ping", queue_name="s2-download-mp4")
+@dramatiq.actor(actor_name="s2_download_mp4.ping", queue_name=settings.current_queue)
 def ping() -> None:
     logger.info("PONG! s2-download-mp4 worker is alive and reachable.")
 
 
 @dramatiq.actor(
     actor_name="s2_download_mp4.process",
-    queue_name="s2-download-mp4",
+    queue_name=settings.current_queue,
 )
 def process(
     record_id: int,

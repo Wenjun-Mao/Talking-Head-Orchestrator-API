@@ -5,6 +5,11 @@ services:
       - "5672:5672"
       - "15672:15672"
     restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 15s
+      retries: 5
 
   s1-ingest-nocodb:
     build:
@@ -18,7 +23,8 @@ services:
       - debug_log_payload
     restart: always
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
   s2-download-mp4:
     build:
@@ -35,7 +41,8 @@ services:
       - debug_log_payload
     restart: always
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
   s3-tts-voice:
     build:
@@ -48,14 +55,17 @@ services:
       - rabbitmq_url
       - tts_api_token
       - debug_log_payload
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   s4-inference-engine:
     build:
       context: ../../services/s4-inference-engine
     volumes:
       - ../../data:/data
-    # profiles:
-    #   - s4
+    profiles:
+      - s4
     secrets:
       - rabbitmq_url
       - debug_log_payload
