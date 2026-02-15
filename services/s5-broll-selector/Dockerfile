@@ -9,4 +9,4 @@ COPY src /app/src
 
 RUN uv sync --no-dev
 
-CMD ["sleep", "infinity"]
+CMD ["/bin/sh", "-c", "uv run dramatiq broll_selector.worker -Q ${S5_QUEUE:-s5-broll-selector} -p 1 -t 1"]

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from collections import deque
 from contextlib import contextmanager
 from pathlib import Path
@@ -62,7 +63,70 @@ class SoulXRuntime:
 			model_type=self.model_type,
 		)
 		self.infer_params = self.flash_inference.get_infer_params()
+		self._is_prewarmed = False
 		logger.info("SoulX pipeline preloaded successfully")
+
+	def prewarm(
+		self,
+		*,
+		cond_image_path: str,
+		base_seed: int,
+		use_face_crop: bool,
+		duration_sec: int,
+	) -> bool:
+		if self._is_prewarmed:
+			logger.info("SoulX startup prewarm skipped: already prewarmed")
+			return True
+
+		cond_image = Path(cond_image_path)
+		if not cond_image.exists():
+			logger.warning("SoulX startup prewarm skipped: cond image not found at {}", cond_image)
+			return False
+
+		sample_rate = int(self.infer_params["sample_rate"])
+		tgt_fps = int(self.infer_params["tgt_fps"])
+		cached_audio_duration = int(self.infer_params["cached_audio_duration"])
+		frame_num = int(self.infer_params["frame_num"])
+
+		audio_start_idx = cached_audio_duration * tgt_fps - frame_num
+		audio_end_idx = cached_audio_duration * tgt_fps
+
+		warmup_sec = max(cached_audio_duration, int(duration_sec))
+		warmup_audio = np.zeros(sample_rate * warmup_sec, dtype=np.float32)
+
+		logger.info(
+			"Starting SoulX startup prewarm (duration_sec={}, cond_image={}, model_type={})",
+			warmup_sec,
+			cond_image,
+			self.model_type,
+		)
+
+		with _pushd(self.vendor_root):
+			self.flash_inference.get_base_data(
+				self.pipeline,
+				cond_image_path_or_dir=str(cond_image),
+				base_seed=base_seed,
+				use_face_crop=use_face_crop,
+			)
+
+			audio_embedding = self.flash_inference.get_audio_embedding(
+				self.pipeline,
+				warmup_audio,
+				audio_start_idx,
+				audio_end_idx,
+			)
+
+			if torch.cuda.is_available():
+				torch.cuda.synchronize()
+			start_ts = time.time()
+			self._run_pipeline(audio_embedding, chunk_idx=-1)
+			if torch.cuda.is_available():
+				torch.cuda.synchronize()
+			elapsed = time.time() - start_ts
+
+		self._is_prewarmed = True
+		logger.info("SoulX startup prewarm completed in {:.2f}s", elapsed)
+		return True
 
 	def generate(
 		self,

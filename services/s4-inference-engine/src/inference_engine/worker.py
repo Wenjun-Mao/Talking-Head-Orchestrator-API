@@ -34,6 +34,20 @@ runtime = SoulXRuntime(
     model_type=settings.model_type,
 )
 
+if settings.startup_prewarm_enabled:
+    logger.info(
+        "S4 startup prewarm enabled (duration_sec={})",
+        settings.startup_prewarm_duration_sec,
+    )
+    runtime.prewarm(
+        cond_image_path=settings.cond_image_path,
+        base_seed=settings.base_seed,
+        use_face_crop=settings.use_face_crop,
+        duration_sec=settings.startup_prewarm_duration_sec,
+    )
+else:
+    logger.info("S4 startup prewarm disabled")
+
 
 def _enqueue_downstream(
     settings: Any,

@@ -92,6 +92,18 @@ class Settings(BaseSettings):
         description="Seed used by SoulX pipeline",
         validation_alias=AliasChoices("S4_BASE_SEED", "base_seed"),
     )
+    startup_prewarm_enabled: bool = Field(
+        True,
+        description="Run one startup warmup pass to trigger Torch compile before first real job",
+        validation_alias=AliasChoices("S4_STARTUP_PREWARM_ENABLED", "startup_prewarm_enabled"),
+    )
+    startup_prewarm_duration_sec: int = Field(
+        8,
+        description="Warmup audio length in seconds used for startup prewarm",
+        validation_alias=AliasChoices("S4_STARTUP_PREWARM_DURATION_SEC", "startup_prewarm_duration_sec"),
+        ge=2,
+        le=60,
+    )
 
 
 def get_settings() -> Settings:

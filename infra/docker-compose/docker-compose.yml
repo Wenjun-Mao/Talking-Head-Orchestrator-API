@@ -87,18 +87,36 @@ services:
   s5-broll-selector:
     build:
       context: ../../services/s5-broll-selector
+    environment:
+      - S5_QUEUE=s5-broll-selector
     volumes:
       - ../../data:/data
-    profiles:
-      - s5
+    # profiles:
+    #   - s5
+    secrets:
+      - rabbitmq_url
+      - debug_log_payload
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: always
 
   s6-video-compositor:
     build:
       context: ../../services/s6-video-compositor
+    environment:
+      - S6_QUEUE=s6-video-compositor
     volumes:
       - ../../data:/data
-    profiles:
-      - s6
+    # profiles:
+    #   - s6
+    secrets:
+      - rabbitmq_url
+      - debug_log_payload
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: always
 
   s7-storage-uploader:
     build:
