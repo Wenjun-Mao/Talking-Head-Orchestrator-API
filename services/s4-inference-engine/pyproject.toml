@@ -1,10 +1,10 @@
 [project]
 name = "inference-engine"
 version = "0.1.0"
-description = "Core animation engine placeholder"
-requires-python = ">=3.12"
+description = "SoulX-FlashHead-based animation inference worker"
+requires-python = ">=3.10,<3.13"
 dependencies = [
-  "dramatiq[rabbitmq]>=1.17.0",
+  "dramatiq[rabbitmq]>=2.0.1",
   "loguru>=0.7.2",
   "pydantic>=2.7.0",
   "pydantic-settings>=2.2.1",

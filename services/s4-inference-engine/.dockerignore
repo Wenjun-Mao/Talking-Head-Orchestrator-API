@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+vendor/SoulX-FlashHead/models/
+vendor/SoulX-FlashHead/sample_results/

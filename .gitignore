@@ -178,3 +178,9 @@ infra/docker-compose/secrets/*
 
 # GEMINI.md
 data/*
+
+# Local model cache (not tracked)
+models/
+services/s4-inference-engine/vendor/
+services/s4-inference-engine/vendor/SoulX-FlashHead/models/
+services/s4-inference-engine/vendor/SoulX-FlashHead/sample_results/
