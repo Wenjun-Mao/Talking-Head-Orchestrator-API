@@ -9,4 +9,4 @@ COPY src /app/src
 
 RUN uv sync --no-dev
 
-CMD ["sleep", "infinity"]
+CMD ["uv", "run", "dramatiq", "nocodb_updater.worker", "--processes", "1", "--threads", "4", "--queues", "s8-nocodb-updater"]

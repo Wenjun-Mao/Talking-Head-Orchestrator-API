@@ -4,6 +4,10 @@ Dependencies: managed with uv via pyproject.toml.
 
 Inputs:
 - record_id
-- public_url
+- public_mp4_url
 Outputs:
 - updated record
+
+Behavior:
+- Uses `PATCH /api/v2/tables/{tableId}/records`.
+- Updates only `chengpinurl` for the given `Id`.

@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+import json
+import os
+from typing import Any
+
+import dramatiq
+import requests
+from dramatiq.brokers.rabbitmq import RabbitmqBroker
+from loguru import logger
+
+from nocodb_updater.settings import get_settings
+
+settings = get_settings()
+
+_url_parts = settings.rabbitmq_url.split("@")
+_masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
+
+logger.info(
+    "Initializing s8-nocodb-updater worker (broker={}, current_queue={}, table_id={}, field={})",
+    _masked_url,
+    settings.current_queue,
+    settings.nocodb_table_id,
+    settings.update_field_name,
+)
+
+broker = RabbitmqBroker(url=settings.rabbitmq_url)
+dramatiq.set_broker(broker)
+broker.declare_queue(settings.current_queue, ensure=True)
+
+
+def _update_record(*, settings: Any, record_id: int, public_mp4_url: str) -> None:
+    endpoint = f"{settings.nocodb_base_url.rstrip('/')}/api/v2/tables/{settings.nocodb_table_id}/records"
+    headers = {
+        "xc-token": settings.nocodb_api_key,
+        "Content-Type": "application/json",
+    }
+    payload = [
+        {
+            "Id": record_id,
+            settings.update_field_name: public_mp4_url,
+        }
+    ]
+
+    response = requests.patch(endpoint, headers=headers, json=payload, timeout=60)
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"NocoDB update failed (status={response.status_code}): {response.text[:500]}"
+        )
+
+
+@dramatiq.actor(actor_name="s8_nocodb_updater.ping", queue_name=settings.current_queue)
+def ping() -> None:
+    logger.info("PONG! s8-nocodb-updater worker is alive.")
+
+
+@dramatiq.actor(actor_name="s8_nocodb_updater.process", queue_name=settings.current_queue)
+def process(record_id: int, public_mp4_url: str, *extra_args: Any) -> None:
+    logger.info("Received NocoDB update job for record_id={}", record_id)
+    settings = get_settings()
+
+    # Backward compatibility for previously queued messages where public_mp4_url
+    # may not be the second argument.
+    if ".mp4" not in str(public_mp4_url).lower() and extra_args:
+        for candidate in extra_args:
+            if isinstance(candidate, str) and ".mp4" in candidate.lower():
+                public_mp4_url = candidate
+                break
+
+    if settings.debug_log_payload:
+        logger.info(
+            "NocoDB update payload: {}",
+            json.dumps(
+                {
+                    "record_id": record_id,
+                    "public_mp4_url": public_mp4_url,
+                    "field": settings.update_field_name,
+                    "table_id": settings.nocodb_table_id,
+                },
+                ensure_ascii=False,
+            ),
+        )
+
+    if ".mp4" not in public_mp4_url.lower():
+        raise ValueError(f"Expected mp4 URL, got: {public_mp4_url}")
+
+    try:
+        _update_record(settings=settings, record_id=record_id, public_mp4_url=public_mp4_url)
+        logger.info("NocoDB update complete for record_id={}", record_id)
+    except Exception:
+        logger.exception("Failed NocoDB update for record_id={}", record_id)
+        raise
+    finally:
+        os.sync() if hasattr(os, "sync") else None
+
+
+logger.info(f"Worker started with actors: {[a.actor_name for a in broker.actors.values()]}")

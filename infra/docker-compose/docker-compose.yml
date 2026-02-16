@@ -121,18 +121,41 @@ services:
   s7-storage-uploader:
     build:
       context: ../../services/s7-storage-uploader
+    environment:
+      - S7_QUEUE=s7-storage-uploader
+      - S7_CHEVERETO_BASE_URL=https://imagor.wanyouwan.cn
+      - S7_CHEVERETO_ALBUM_ID=uvX
+      - S7_CHEVERETO_ALBUM_NAME=talking head
+      - S7_EXPIRATION_INTERVAL=P3D
     volumes:
       - ../../data:/data
-    profiles:
-      - s7
+    secrets:
+      - rabbitmq_url
+      - chevereto_api_key
+      - debug_log_payload
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: always
 
   s8-nocodb-updater:
     build:
       context: ../../services/s8-nocodb-updater
+    environment:
+      - S8_QUEUE=s8-nocodb-updater
+      - S8_NOCODB_TABLE_ID=murmwwnt5ukvp7i
+      - S8_UPDATE_FIELD_NAME=chengpinurl
     volumes:
       - ../../data:/data
-    profiles:
-      - s8
+    secrets:
+      - rabbitmq_url
+      - nocodb_api_key
+      - nocodb_base_url
+      - debug_log_payload
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: always
 
 secrets:
   rabbitmq_url:
@@ -147,3 +170,5 @@ secrets:
     file: ./secrets/tts_api_token
   debug_log_payload:
     file: ./secrets/debug_log_payload
+  chevereto_api_key:
+    file: ./secrets/chevereto_api_key

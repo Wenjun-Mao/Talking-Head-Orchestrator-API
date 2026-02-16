@@ -8,3 +8,6 @@ Inputs:
 - video_guide_path
 Outputs:
 - video_final_path
+
+Performance notes:
+- s6 always uses fps-based retime for s2 and `libx264` encoding.

@@ -53,6 +53,16 @@ class Settings(BaseSettings):
         description="Foreground bottom margin in pixels",
         validation_alias=AliasChoices("S6_OVERLAY_MARGIN_Y", "overlay_margin_y"),
     )
+    x264_preset: str = Field(
+        "veryfast",
+        description="x264 preset when using libx264",
+        validation_alias=AliasChoices("S6_X264_PRESET", "x264_preset"),
+    )
+    x264_crf: int = Field(
+        20,
+        description="x264 CRF when using libx264",
+        validation_alias=AliasChoices("S6_X264_CRF", "x264_crf"),
+    )
     debug_log_payload: bool = Field(
         False,
         description="Enable verbose logging",

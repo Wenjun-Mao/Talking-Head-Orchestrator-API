@@ -59,6 +59,44 @@ def _probe_duration_seconds(path: str) -> float:
     return float(result.stdout.strip())
 
 
+def _probe_video_fps(path: str) -> float:
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=avg_frame_rate,r_frame_rate",
+        "-of",
+        "json",
+        path,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffprobe fps probe failed for {path}: {result.stderr}")
+
+    payload = json.loads(result.stdout)
+    streams = payload.get("streams", [])
+    if not streams:
+        return 25.0
+
+    def _parse_rate(rate: str) -> float:
+        if not rate or rate == "0/0":
+            return 0.0
+        if "/" in rate:
+            num_str, den_str = rate.split("/", 1)
+            num = float(num_str)
+            den = float(den_str)
+            return num / den if den > 0 else 0.0
+        return float(rate)
+
+    avg = _parse_rate(streams[0].get("avg_frame_rate", "0/0"))
+    raw = _parse_rate(streams[0].get("r_frame_rate", "0/0"))
+    fps = avg if avg > 0 else raw
+    return fps if fps > 0 else 25.0
+
+
 def _compose_video(
     *,
     bg_video_path: str,
@@ -68,19 +106,38 @@ def _compose_video(
     scale_ratio: float,
     margin_x: int,
     margin_y: int,
+    x264_preset: str,
+    x264_crf: int,
 ) -> None:
     bg_duration = _probe_duration_seconds(bg_video_path)
     fg_duration = _probe_duration_seconds(fg_video_path)
+    bg_fps = _probe_video_fps(bg_video_path)
+
+    if bg_duration <= 0:
+        raise RuntimeError("Background video duration is zero")
     if fg_duration <= 0:
         raise RuntimeError("Foreground video duration is zero")
 
-    speed_factor = bg_duration / fg_duration
+    target_duration = fg_duration
+    bg_setpts_factor = target_duration / bg_duration
+    is_slowdown = bg_setpts_factor > 1.0001
+    bg_chain = f"[0:v]setpts=PTS*{bg_setpts_factor:.8f},fps={bg_fps:.6f}:round=near[bg]"
+
     filter_complex = (
-        f"[1:v]setpts=PTS*{speed_factor:.8f},scale=iw*{scale_ratio:.4f}:ih*{scale_ratio:.4f}[fg];"
-        f"[0:v][fg]overlay={margin_x}:H-h-{margin_y}:eof_action=pass[vout]"
+        f"{bg_chain};"
+        f"[1:v]setpts=PTS-STARTPTS,scale=iw*{scale_ratio:.4f}:ih*{scale_ratio:.4f}[fg];"
+        f"[bg][fg]overlay={margin_x}:H-h-{margin_y}:eof_action=pass:shortest=0[vout]"
     )
 
-    cmd = [
+    logger.info(
+        "S6 duration reconcile: s2={:.3f}s, s4={:.3f}s (target), bg_setpts_factor={:.6f}, mode={}",
+        bg_duration,
+        fg_duration,
+        bg_setpts_factor,
+        "slow_down_s2" if is_slowdown else "speed_up_s2",
+    )
+
+    common_cmd = [
         "ffmpeg",
         "-y",
         "-i",
@@ -98,13 +155,17 @@ def _compose_video(
         "-af",
         "apad",
         "-t",
-        f"{bg_duration:.3f}",
+        f"{target_duration:.3f}",
+        "-fps_mode",
+        "cfr",
+        "-r",
+        f"{bg_fps:.6f}",
         "-c:v",
         "libx264",
         "-preset",
-        "veryfast",
+        x264_preset,
         "-crf",
-        "20",
+        str(x264_crf),
         "-c:a",
         "aac",
         "-movflags",
@@ -112,7 +173,8 @@ def _compose_video(
         output_path,
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(common_cmd, capture_output=True, text=True)
+
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg compose failed: {result.stderr}")
 
@@ -161,6 +223,8 @@ def process(
             scale_ratio=settings.overlay_scale_ratio,
             margin_x=settings.overlay_margin_x,
             margin_y=settings.overlay_margin_y,
+            x264_preset=settings.x264_preset,
+            x264_crf=settings.x264_crf,
         )
 
         logger.info("Composition complete for record_id={}, output={}", record_id, output_path)
