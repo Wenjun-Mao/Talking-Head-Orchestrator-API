@@ -2,10 +2,23 @@ Upload final video to storage and return URL.
 
 Dependencies: managed with uv via pyproject.toml.
 
-Inputs:
-- video_final_path
-Outputs:
-- public_url
+Message in
+- `record_id`
+- `table_id`
+- `title`
+- `url`
+- `content`
+- `original_text`
+- `douyin_download_url`
+- `douyin_video_path`
+- `tts_audio_path`
+- `inference_video_path`
+- `composited_video_path`
+
+Message out (to s8)
+- `record_id`
+- `table_id`
+- `public_mp4_url`
 
 Chevereto API (v1.1):
 - Upload endpoint: `/api/1/upload`
@@ -21,4 +34,4 @@ Configuration notes:
 - `S7_CHEVERETO_API_KEY` is read from docker secret `chevereto_api_key`.
 - To force uploads into album "talking head", set `S7_CHEVERETO_ALBUM_ID` to that album id.
 - `S7_CHEVERETO_ALBUM_NAME` is only informational; API upload assignment uses `album_id`.
-- s7 enqueues only `(record_id, public_mp4_url)` to s8.
+- s7 enqueues `(record_id, table_id, public_mp4_url)` to s8.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from loguru import logger
 
@@ -124,6 +124,7 @@ async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
         enqueue_downstream(
             settings,
             record_id=row.record_id,
+            table_id=payload.data.table_id,
             title=row.title,
             url=row.url,
             content=row.content,
@@ -132,6 +133,7 @@ async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
         if settings.debug_log_payload:
             msg_args = {
                 "record_id": row.record_id,
+                "table_id": payload.data.table_id,
                 "title": row.title,
                 "url": row.url,
                 "content": row.content,

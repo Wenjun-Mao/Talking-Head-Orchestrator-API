@@ -4,7 +4,7 @@
 **Talking-Head-Orchestrator-API** is a microservices-based pipeline designed to automate the generation of talking-head videos. It provides a scalable, asynchronous workflow triggered by NocoDB records.
 
 ## Architecture
-The system follows a sequential pipeline architecture where a single job (identified by a `record_id`) is passed through multiple specialized stages.
+The system follows a sequential pipeline architecture where each job carries `record_id` and `table_id` through all specialized stages.
 
 *   **Communication:** Services communicate asynchronously using **RabbitMQ** as the broker and **Dramatiq** as the task queue library.
 *   **Orchestration:** Services are containerized and orchestrated via **Docker Compose**.
@@ -14,8 +14,8 @@ The system follows a sequential pipeline architecture where a single job (identi
 1.  **s1-ingest-nocodb:** Ingests trigger from NocoDB, initializes the job.
 2.  **s2-download-mp4:** Downloads the source video (e.g., from Douyin).
 3.  **s3-tts-voice:** Generates audio speech from text.
-4.  **s4-inference-engine:** (Placeholder) Generates the talking head animation using the audio and source image.
-5.  **s5-broll-selector:** Selects background/B-roll footage.
+4.  **s4-inference-engine:** Generates talking-head animation using SoulX-FlashHead.
+5.  **s5-broll-selector:** Pass-through stage (B-roll selection reserved for future implementation).
 6.  **s6-video-compositor:** Composites the avatar, background, and audio.
 7.  **s7-storage-uploader:** Uploads the final result to storage.
 8.  **s8-nocodb-updater:** Updates the original NocoDB record with the result URL.
@@ -28,7 +28,7 @@ Each service is independently deployable and manages its own dependencies.
 *   `s1-ingest-nocodb`: Webhook entry point (FastAPI).
 *   `s2-download-mp4`: Video downloader worker.
 *   `s3-tts-voice`: Text-to-Speech worker.
-*   `s4-inference-engine`: Core animation engine (currently being refactored).
+*   `s4-inference-engine`: Core animation engine (SoulX-FlashHead runtime).
 *   `s5-broll-selector`: B-roll selection logic.
 *   `s6-video-compositor`: FFmpeg-based composition.
 *   `s7-storage-uploader`: Cloud storage interface.

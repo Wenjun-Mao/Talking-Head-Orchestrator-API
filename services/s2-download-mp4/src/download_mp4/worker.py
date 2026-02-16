@@ -91,6 +91,7 @@ def _download_mp4(douyin_download_url: str, output_dir: str, record_id: int) -> 
 def _enqueue_downstream(
     settings: Any,
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -104,6 +105,7 @@ def _enqueue_downstream(
         actor_name=settings.downstream_actor,
         args=[
             record_id,
+            table_id,
             title,
             url,
             content,
@@ -128,6 +130,7 @@ def ping() -> None:
 )
 def process(
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -138,6 +141,7 @@ def process(
     if settings.debug_log_payload:
         args = {
             "record_id": record_id,
+            "table_id": table_id,
             "title": title,
             "url": url,
             "content": content,
@@ -156,6 +160,7 @@ def process(
         _enqueue_downstream(
             settings,
             record_id=record_id,
+            table_id=table_id,
             title=title,
             url=url,
             content=content,
@@ -167,6 +172,7 @@ def process(
         if settings.debug_log_payload:
             result_args = {
                 "record_id": record_id,
+                "table_id": table_id,
                 "title": title,
                 "url": url,
                 "content": content,

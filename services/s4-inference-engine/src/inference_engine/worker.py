@@ -52,6 +52,7 @@ else:
 def _enqueue_downstream(
     settings: Any,
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -67,6 +68,7 @@ def _enqueue_downstream(
         actor_name=settings.downstream_actor,
         args=[
             record_id,
+            table_id,
             title,
             url,
             content,
@@ -93,6 +95,7 @@ def ping() -> None:
 )
 def process(
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -131,6 +134,7 @@ def process(
         _enqueue_downstream(
             settings,
             record_id=record_id,
+            table_id=table_id,
             title=title,
             url=url,
             content=content,

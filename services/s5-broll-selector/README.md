@@ -1,19 +1,10 @@
 Current mode: pass-through (no B-roll selection yet).
 
-Original intended behavior (kept as trace):
-<!--
-Select a random guide video for tail content.
-
-Inputs:
-- local video directory
-Outputs:
-- video_guide_path
--->
-
 Dependencies: managed with uv via pyproject.toml.
 
 Inputs:
 - record_id
+- table_id
 - title
 - url
 - content

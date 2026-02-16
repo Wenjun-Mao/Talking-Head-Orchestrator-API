@@ -47,6 +47,7 @@ def ping() -> None:
 @dramatiq.actor(actor_name="s5_broll_selector.process", queue_name=settings.current_queue)
 def process(
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -62,6 +63,7 @@ def process(
     if settings.debug_log_payload:
         payload = {
             "record_id": record_id,
+            "table_id": table_id,
             "title": title,
             "url": url,
             "douyin_video_path": douyin_video_path,
@@ -74,6 +76,7 @@ def process(
         _enqueue_downstream(
             settings,
             record_id,
+            table_id,
             title,
             url,
             content,

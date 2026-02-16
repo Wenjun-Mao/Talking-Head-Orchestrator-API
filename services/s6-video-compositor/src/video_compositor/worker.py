@@ -187,6 +187,7 @@ def ping() -> None:
 @dramatiq.actor(actor_name="s6_video_compositor.process", queue_name=settings.current_queue)
 def process(
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -202,6 +203,7 @@ def process(
     if settings.debug_log_payload:
         payload = {
             "record_id": record_id,
+            "table_id": table_id,
             "background_video": douyin_video_path,
             "foreground_video": inference_video_path,
             "tts_audio": tts_audio_path,
@@ -232,6 +234,7 @@ def process(
         _enqueue_downstream(
             settings,
             record_id,
+            table_id,
             title,
             url,
             content,

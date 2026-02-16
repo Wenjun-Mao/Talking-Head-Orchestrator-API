@@ -34,6 +34,7 @@ def enqueue_ping(settings: Settings) -> None:
 def enqueue_downstream(
     settings: Settings,
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -43,7 +44,7 @@ def enqueue_downstream(
     message = dramatiq.Message(
         queue_name=settings.downstream_queue,
         actor_name=settings.downstream_actor,
-        args=[record_id, title, url, content, original_text],
+        args=[record_id, table_id, title, url, content, original_text],
         kwargs={},
         options={},
     )

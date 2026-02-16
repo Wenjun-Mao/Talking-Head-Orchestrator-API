@@ -6,7 +6,7 @@ This service runs SoulX-FlashHead inference as a Dramatiq worker.
 - Preloads SoulX pipeline once at worker startup.
 - Uses a fixed condition image from `data/imgs/girl.png` (configurable).
 - Uses TTS audio from s3 message payload for per-job generation.
-- Enqueues generated mp4 to s5.
+- Enqueues generated mp4 to s5 while preserving upstream metadata (`record_id`, `table_id`, source fields).
 
 ## Local assets (not tracked by git)
 Place model folders under:
@@ -26,7 +26,7 @@ Defaults in compose:
 
 ## Run
 ```bash
-docker compose -f infra/docker-compose/docker-compose.yml --profile s4 up -d --build s4-inference-engine
+docker compose -f infra/docker-compose/docker-compose.yml up -d --build s4-inference-engine
 ```
 
 ## Notes

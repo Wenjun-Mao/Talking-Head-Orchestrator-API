@@ -100,6 +100,7 @@ def ping() -> None:
 @dramatiq.actor(actor_name="s7_storage_uploader.process", queue_name=settings.current_queue)
 def process(
     record_id: int,
+    table_id: str,
     title: str,
     url: str,
     content: str,
@@ -155,6 +156,7 @@ def process(
         _enqueue_downstream(
             settings,
             record_id,
+            table_id,
             public_mp4_url,
         )
     except Exception:

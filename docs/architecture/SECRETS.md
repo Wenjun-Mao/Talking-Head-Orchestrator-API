@@ -6,27 +6,24 @@ Recommendation
 - Keep real secrets out of git; commit only .env.example.
 
 How it works with pydantic-settings
-- Pydantic-settings reads, in order:
-  1) environment variables (S1_*)
-  2) .env file (local dev)
-  3) Docker secrets mounted as files in /run/secrets
-- With secrets_dir="/run/secrets", it loads files named after the field name.
-  For s1-ingest-nocodb, expected files:
-  - /run/secrets/rabbitmq_url
-  - /run/secrets/nocodb_api_key
-  - /run/secrets/nocodb_base_url
+- Services read, in order:
+  1) environment variables (`Sx_*`)
+  2) `.env` file (local dev)
+  3) Docker secrets mounted as files in `/run/secrets`
+- With `secrets_dir="/run/secrets"`, secret files are unprefixed field names.
 
 Prefix note
-- Env vars use the S1_ prefix (e.g., S1_NOCODB_API_KEY).
-- Secret files are unprefixed (e.g., /run/secrets/nocodb_api_key).
+- Env vars use service prefixes (for example `S1_`, `S2_`, … `S8_`).
+- Secret files are unprefixed (for example `/run/secrets/nocodb_api_key`).
 
-Local dev example
-1) Copy .env.example to .env at repo root or service directory.
-2) Fill values for:
-   - S1_RABBITMQ_URL
-   - S1_NOCODB_API_KEY
-   - S1_NOCODB_BASE_URL
-3) Run: uv run uvicorn ingest_nocodb.app:app --host 0.0.0.0 --port 7101
+Current shared secret files used by compose
+- `/run/secrets/rabbitmq_url`
+- `/run/secrets/nocodb_api_key`
+- `/run/secrets/nocodb_base_url`
+- `/run/secrets/video_parse_api_token`
+- `/run/secrets/tts_api_token`
+- `/run/secrets/chevereto_api_key`
+- `/run/secrets/debug_log_payload`
 
 Docker Compose example
 
@@ -50,4 +47,5 @@ secrets:
 
 Notes
 - For RabbitMQ URL, env var is fine if it is not sensitive; otherwise put it in a secret file named rabbitmq_url.
-- In Kubernetes, map secrets to /run/secrets or use env vars; pydantic-settings supports both.
+- In Kubernetes, map secrets to `/run/secrets` or use env vars; `pydantic-settings` supports both.
+- `s8-nocodb-updater` now primarily uses `table_id` from message payload; `S8_NOCODB_TABLE_ID` is optional fallback.
