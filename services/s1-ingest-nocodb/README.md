@@ -13,7 +13,7 @@ Outputs:
 Validation
 - Requires non-empty `data.table_id`
 - Requires per row: positive `Id` and non-empty `url`, `content`
-- `Title` and `originaltext` are ignored by this pipeline
+- Only `Id`, `url`, `content` are modeled in `NocoDbRow`; all other row fields are accepted via `extra=allow` and ignored by the pipeline
 - Logs payload validation errors server-side via the request validation handler
 - Returns generic `Invalid webhook payload.` for invalid requests
 

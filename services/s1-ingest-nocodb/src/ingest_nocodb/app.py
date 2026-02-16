@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Annotated, AsyncIterator, List, Optional
 
@@ -43,17 +42,8 @@ class NocoDbRow(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     record_id: int = Field(gt=0, alias="Id")
-    created_at: Optional[datetime] = Field(default=None, alias="CreatedAt")
-    updated_at: Optional[datetime] = Field(default=None, alias="UpdatedAt")
     url: NonEmptyStr = Field(alias="url")
     content: NonEmptyStr = Field(alias="content")
-    image1: Optional[str] = Field(default=None, alias="image1")
-    image2: Optional[str] = Field(default=None, alias="image2")
-    image3: Optional[str] = Field(default=None, alias="image3")
-    image4: Optional[str] = Field(default=None, alias="image4")
-    image5: Optional[str] = Field(default=None, alias="image5")
-    cover_image: Optional[str] = Field(default=None, alias="fengmianimage")
-    final_url: Optional[str] = Field(default=None, alias="chengpinurl")
 
 
 class NocoDbWebhookData(BaseModel):
