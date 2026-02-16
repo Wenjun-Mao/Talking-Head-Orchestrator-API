@@ -31,6 +31,12 @@ dramatiq.set_broker(broker)
 broker.declare_queue(settings.current_queue, ensure=True)
 
 
+def _truncate_text(value: str, *, max_chars: int = 30) -> str:
+    if len(value) <= max_chars:
+        return value
+    return f"{value[:max_chars]}..."
+
+
 def _request_tts_url(settings: Any, text: str) -> str:
     """
     Call the external TTS API to generate a voice URL.
@@ -141,7 +147,7 @@ def process(
         args = {
             "record_id": record_id,
             "table_id": table_id,
-            "content": content,
+            "content": _truncate_text(content),
             "douyin_video_path": douyin_video_path,
         }
         logger.info("Job details:{}", json.dumps(args, indent=2, default=str))
@@ -172,7 +178,7 @@ def process(
     except Exception:
         logger.bind(
             record_id=record_id,
-            content=content[:100],
+            content=_truncate_text(content),
         ).exception("Failed TTS job")
         raise
     finally:

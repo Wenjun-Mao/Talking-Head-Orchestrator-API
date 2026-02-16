@@ -34,6 +34,12 @@ dramatiq.set_broker(broker)
 broker.declare_queue(settings.current_queue, ensure=True)
 
 
+def _truncate_text(value: str, *, max_chars: int = 30) -> str:
+    if len(value) <= max_chars:
+        return value
+    return f"{value[:max_chars]}..."
+
+
 def _extract_douyin_download_url(payload: dict[str, Any]) -> Optional[str]:
     if isinstance(payload.get("data"), dict):
         data = payload["data"]
@@ -133,7 +139,7 @@ def process(
             "record_id": record_id,
             "table_id": table_id,
             "url": url,
-            "content": content,
+            "content": _truncate_text(content),
         }
         logger.info("Received job details:\n{}", json.dumps(args, indent=2, default=str))
 
@@ -157,7 +163,7 @@ def process(
             result_args = {
                 "record_id": record_id,
                 "table_id": table_id,
-                "content": content,
+                "content": _truncate_text(content),
                 "douyin_download_url": douyin_download_url,
                 "douyin_video_path": douyin_video_path,
                 "downstream_queue": settings.downstream_queue,

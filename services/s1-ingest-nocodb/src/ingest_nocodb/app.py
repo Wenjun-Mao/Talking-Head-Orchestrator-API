@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from contextlib import asynccontextmanager
-from typing import Annotated, AsyncIterator, List, Optional
+from typing import Annotated, Any, AsyncIterator, List, Optional
 
 from loguru import logger
 
@@ -26,6 +26,26 @@ app = FastAPI(title="s1-ingest-nocodb", lifespan=lifespan)
 
 
 NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+def _truncate_text(value: str, *, max_chars: int = 30) -> str:
+    if len(value) <= max_chars:
+        return value
+    return f"{value[:max_chars]}..."
+
+
+def _truncate_payload_text_fields(payload: Any, *, max_chars: int = 30) -> Any:
+    if isinstance(payload, dict):
+        truncated: dict[str, Any] = {}
+        for key, value in payload.items():
+            if key == "content" and isinstance(value, str):
+                truncated[key] = _truncate_text(value, max_chars=max_chars)
+            else:
+                truncated[key] = _truncate_payload_text_fields(value, max_chars=max_chars)
+        return truncated
+    if isinstance(payload, list):
+        return [_truncate_payload_text_fields(item, max_chars=max_chars) for item in payload]
+    return payload
 
 
 @app.exception_handler(RequestValidationError)
@@ -80,17 +100,19 @@ async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
     settings = get_settings()
 
     if settings.debug_log_payload:
+        payload_for_log = _truncate_payload_text_fields(payload.model_dump())
         logger.info(
             "Received webhook request:\n{}",
-            json.dumps(payload.model_dump(), indent=2, default=str),
+            json.dumps(payload_for_log, indent=2, default=str),
         )
 
     for row in payload.data.rows:
         if settings.debug_log_payload:
+            row_for_log = _truncate_payload_text_fields(row.model_dump())
             logger.info(
                 "Processing row {}:\n{}",
                 row.record_id,
-                json.dumps(row.model_dump(), indent=2, default=str),
+                json.dumps(row_for_log, indent=2, default=str),
             )
 
         enqueue_downstream(
@@ -105,7 +127,7 @@ async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
                 "record_id": row.record_id,
                 "table_id": payload.data.table_id,
                 "url": row.url,
-                "content": row.content,
+                "content": _truncate_text(row.content),
             }
             logger.info(
                 "Enqueued downstream message:\n{}",
