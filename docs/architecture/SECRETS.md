@@ -48,4 +48,4 @@ secrets:
 Notes
 - For RabbitMQ URL, env var is fine if it is not sensitive; otherwise put it in a secret file named rabbitmq_url.
 - In Kubernetes, map secrets to `/run/secrets` or use env vars; `pydantic-settings` supports both.
-- `s8-nocodb-updater` now primarily uses `table_id` from message payload; `S8_NOCODB_TABLE_ID` is optional fallback.
+- `s8-nocodb-updater` uses `table_id` from message payload.

@@ -33,11 +33,6 @@ class Settings(BaseSettings):
         description="NocoDB base URL, e.g. https://nocodb.example.com",
         validation_alias=AliasChoices("S8_NOCODB_BASE_URL", "nocodb_base_url"),
     )
-    nocodb_table_id: str = Field(
-        "",
-        description="Optional fallback NocoDB table id; runtime webhook table_id is preferred",
-        validation_alias=AliasChoices("S8_NOCODB_TABLE_ID", "nocodb_table_id"),
-    )
     update_field_name: str = Field(
         "chengpinurl",
         description="NocoDB field name to update with final mp4 URL",

@@ -188,11 +188,6 @@ def ping() -> None:
 def process(
     record_id: int,
     table_id: str,
-    title: str,
-    url: str,
-    content: str,
-    original_text: str,
-    douyin_download_url: str,
     douyin_video_path: str,
     tts_audio_path: str,
     inference_video_path: str,
@@ -235,14 +230,6 @@ def process(
             settings,
             record_id,
             table_id,
-            title,
-            url,
-            content,
-            original_text,
-            douyin_download_url,
-            douyin_video_path,
-            tts_audio_path,
-            inference_video_path,
             output_path,
         )
     except Exception:

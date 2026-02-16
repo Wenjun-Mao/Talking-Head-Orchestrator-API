@@ -13,4 +13,4 @@ Behavior:
 - Uses `PATCH /api/v2/tables/{tableId}/records`.
 - Updates only `chengpinurl` for the given `Id`.
 - `tableId` is taken from message payload at runtime.
-- `S8_NOCODB_TABLE_ID` can be used as fallback when older/partial messages do not include `table_id`.
+- `table_id` is required in the message payload.

@@ -35,16 +35,14 @@ def enqueue_downstream(
     settings: Settings,
     record_id: int,
     table_id: str,
-    title: str,
     url: str,
     content: str,
-    original_text: str,
 ) -> None:
     broker = init_broker(settings)
     message = dramatiq.Message(
         queue_name=settings.downstream_queue,
         actor_name=settings.downstream_actor,
-        args=[record_id, table_id, title, url, content, original_text],
+        args=[record_id, table_id, url, content],
         kwargs={},
         options={},
     )

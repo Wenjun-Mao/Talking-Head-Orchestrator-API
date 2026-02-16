@@ -2,19 +2,31 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import List, Optional
+from contextlib import asynccontextmanager
+from typing import Annotated, AsyncIterator, List, Optional
 
 from loguru import logger
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from ingest_nocodb.messaging import enqueue_downstream, enqueue_ping, init_broker
 from ingest_nocodb.settings import get_settings
 
-app = FastAPI(title="s1-ingest-nocodb")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    settings = get_settings()
+    init_broker(settings)
+    yield
+
+
+app = FastAPI(title="s1-ingest-nocodb", lifespan=lifespan)
+
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 @app.exception_handler(RequestValidationError)
@@ -23,29 +35,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.error("Pydantic validation failed for request to {}: {}", request.url.path, error_details)
     return JSONResponse(
         status_code=422,
-        content={"detail": error_details},
+        content={"detail": "Invalid webhook payload."},
     )
-
-
-# Sanity check: ensure settings (from env vars and secrets) and broker are initialized at startup.
-# This will fail fast if config or RabbitMQ connection is invalid,
-# so deployment errors are caught early (not on first request).
-@app.on_event("startup")
-async def startup_check() -> None:
-    settings = get_settings()
-    init_broker(settings)
 
 
 class NocoDbRow(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
-    record_id: int = Field(alias="Id")
-    created_at: datetime = Field(alias="CreatedAt")
-    updated_at: datetime = Field(alias="UpdatedAt")
-    title: Optional[str] = Field(default=None, alias="Title")
-    url: Optional[str] = Field(default=None, alias="url")
-    content: Optional[str] = Field(default=None, alias="content")
-    original_text: Optional[str] = Field(default=None, alias="originaltext")
+    record_id: int = Field(gt=0, alias="Id")
+    created_at: Optional[datetime] = Field(default=None, alias="CreatedAt")
+    updated_at: Optional[datetime] = Field(default=None, alias="UpdatedAt")
+    url: NonEmptyStr = Field(alias="url")
+    content: NonEmptyStr = Field(alias="content")
     image1: Optional[str] = Field(default=None, alias="image1")
     image2: Optional[str] = Field(default=None, alias="image2")
     image3: Optional[str] = Field(default=None, alias="image3")
@@ -58,9 +59,9 @@ class NocoDbRow(BaseModel):
 class NocoDbWebhookData(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    table_id: str
-    table_name: str
-    rows: List[NocoDbRow]
+    table_id: NonEmptyStr
+    table_name: Optional[str] = None
+    rows: List[NocoDbRow] = Field(min_length=1)
 
 
 class NocoDbWebhookPayload(BaseModel):
@@ -86,8 +87,6 @@ async def ping() -> dict[str, str]:
 
 @app.post("/webhook", response_model=WebhookAck)
 async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
-    if not payload.data.rows:
-        raise HTTPException(status_code=400, detail="No rows provided in payload.")
     settings = get_settings()
 
     if settings.debug_log_payload:
@@ -103,41 +102,20 @@ async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
                 row.record_id,
                 json.dumps(row.model_dump(), indent=2, default=str),
             )
-        missing_fields = [
-            name
-            for name, value in {
-                "Title": row.title,
-                "url": row.url,
-                "content": row.content,
-                "originaltext": row.original_text,
-            }.items()
-            if not value
-        ]
-        if missing_fields:
-            error_msg = f"Row {row.record_id} missing mandatory fields: {', '.join(missing_fields)}"
-            logger.error(error_msg)
-            raise HTTPException(
-                status_code=400,
-                detail=error_msg,
-            )
 
         enqueue_downstream(
             settings,
             record_id=row.record_id,
             table_id=payload.data.table_id,
-            title=row.title,
             url=row.url,
             content=row.content,
-            original_text=row.original_text,
         )
         if settings.debug_log_payload:
             msg_args = {
                 "record_id": row.record_id,
                 "table_id": payload.data.table_id,
-                "title": row.title,
                 "url": row.url,
                 "content": row.content,
-                "original_text": row.original_text,
             }
             logger.info(
                 "Enqueued downstream message:\n{}",

@@ -12,20 +12,20 @@ Pipeline overview
 Queueing
 - RabbitMQ broker with Dramatiq workers.
 - `record_id` and webhook `table_id` are propagated through all stages.
-- `s8` uses runtime `table_id` from message payload (with optional env fallback).
+- `s8` uses runtime `table_id` from message payload.
+
+Implementation notes
+- For full `s4` setup (vendor source, models, FlashAttention wheel, Ubuntu NVIDIA toolkit), see `services/s4-inference-engine/SOULX_FLASHHEAD_INTEGRATION.md`.
 
 Message contract (stage by stage)
 
 | Stage | Message in | Message out |
 |---|---|---|
-| `s1-ingest-nocodb` | NocoDB webhook payload (`data.table_id`, `data.rows[*]`) | `record_id, table_id, title, url, content, original_text` |
-| `s2-download-mp4` | `record_id, table_id, title, url, content, original_text` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path` |
-| `s3-tts-voice` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path, tts_audio_path` |
-| `s4-inference-engine` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path, tts_audio_path` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path, tts_audio_path, inference_video_path` |
-| `s5-broll-selector` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path, tts_audio_path, inference_video_path` | unchanged pass-through payload |
-| `s6-video-compositor` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path, tts_audio_path, inference_video_path` | input payload + `composited_video_path` |
-| `s7-storage-uploader` | `record_id, table_id, title, url, content, original_text, douyin_download_url, douyin_video_path, tts_audio_path, inference_video_path, composited_video_path` | `record_id, table_id, public_mp4_url` |
+| `s1-ingest-nocodb` | NocoDB webhook payload (`data.table_id`, `data.rows[*]`) | `record_id, table_id, url, content` |
+| `s2-download-mp4` | `record_id, table_id, url, content` | `record_id, table_id, content, douyin_video_path` |
+| `s3-tts-voice` | `record_id, table_id, content, douyin_video_path` | `record_id, table_id, douyin_video_path, tts_audio_path` |
+| `s4-inference-engine` | `record_id, table_id, douyin_video_path, tts_audio_path` | `record_id, table_id, douyin_video_path, tts_audio_path, inference_video_path` |
+| `s5-broll-selector` | `record_id, table_id, douyin_video_path, tts_audio_path, inference_video_path` | unchanged pass-through payload |
+| `s6-video-compositor` | `record_id, table_id, douyin_video_path, tts_audio_path, inference_video_path` | `record_id, table_id, composited_video_path` |
+| `s7-storage-uploader` | `record_id, table_id, composited_video_path` | `record_id, table_id, public_mp4_url` |
 | `s8-nocodb-updater` | `record_id, table_id, public_mp4_url` | NocoDB row patched (`chengpinurl`) |
-
-Compatibility note
-- `s8` accepts older queued payload shapes and can fall back to `S8_NOCODB_TABLE_ID` when `table_id` is missing.

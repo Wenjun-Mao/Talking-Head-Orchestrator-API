@@ -92,11 +92,7 @@ def _enqueue_downstream(
     settings: Any,
     record_id: int,
     table_id: str,
-    title: str,
-    url: str,
     content: str,
-    original_text: str,
-    douyin_download_url: str,
     douyin_video_path: str,
 ) -> None:
     broker = dramatiq.get_broker()
@@ -106,11 +102,7 @@ def _enqueue_downstream(
         args=[
             record_id,
             table_id,
-            title,
-            url,
             content,
-            original_text,
-            douyin_download_url,
             douyin_video_path,
         ],
         kwargs={},
@@ -131,10 +123,8 @@ def ping() -> None:
 def process(
     record_id: int,
     table_id: str,
-    title: str,
     url: str,
     content: str,
-    original_text: str,
 ) -> None:
     logger.info(f"Received job for record_id={record_id}")
     settings = get_settings()
@@ -142,10 +132,8 @@ def process(
         args = {
             "record_id": record_id,
             "table_id": table_id,
-            "title": title,
             "url": url,
             "content": content,
-            "original_text": original_text,
         }
         logger.info("Received job details:\n{}", json.dumps(args, indent=2, default=str))
 
@@ -161,11 +149,7 @@ def process(
             settings,
             record_id=record_id,
             table_id=table_id,
-            title=title,
-            url=url,
             content=content,
-            original_text=original_text,
-            douyin_download_url=douyin_download_url,
             douyin_video_path=douyin_video_path,
         )
 
@@ -173,10 +157,7 @@ def process(
             result_args = {
                 "record_id": record_id,
                 "table_id": table_id,
-                "title": title,
-                "url": url,
                 "content": content,
-                "original_text": original_text,
                 "douyin_download_url": douyin_download_url,
                 "douyin_video_path": douyin_video_path,
                 "downstream_queue": settings.downstream_queue,
@@ -186,7 +167,6 @@ def process(
     except Exception:
         logger.bind(
             record_id=record_id,
-            title=title,
             url=url,
         ).exception("Failed job")
         raise

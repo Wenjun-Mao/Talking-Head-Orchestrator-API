@@ -101,14 +101,6 @@ def ping() -> None:
 def process(
     record_id: int,
     table_id: str,
-    title: str,
-    url: str,
-    content: str,
-    original_text: str,
-    douyin_download_url: str,
-    douyin_video_path: str,
-    tts_audio_path: str,
-    inference_video_path: str,
     composited_video_path: str,
 ) -> None:
     logger.info("Received upload job for record_id={}", record_id)
@@ -133,7 +125,7 @@ def process(
             base_url=settings.chevereto_base_url,
             api_key=settings.chevereto_api_key,
             local_video_path=str(video_path),
-            title=title,
+            title=f"record-{record_id}",
             expiration_interval=settings.expiration_interval,
             album_id=settings.chevereto_album_id,
         )

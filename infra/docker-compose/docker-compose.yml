@@ -143,7 +143,6 @@ services:
       context: ../../services/s8-nocodb-updater
     environment:
       - S8_QUEUE=s8-nocodb-updater
-      - S8_NOCODB_TABLE_ID=murmwwnt5ukvp7i
       - S8_UPDATE_FIELD_NAME=chengpinurl
     volumes:
       - ../../data:/data

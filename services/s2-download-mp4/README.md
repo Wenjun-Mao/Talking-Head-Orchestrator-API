@@ -19,7 +19,7 @@ Optional settings
 - S2_DOWNSTREAM_ACTOR (default s3_tts_voice.process)
 
 Message in
-- record_id, table_id, title, source_url, content, original_text
+- record_id, table_id, source_url, content
 
 Message out
-- record_id, table_id, title, source_url, content, original_text, download_url, video_path
+- record_id, table_id, content, douyin_video_path

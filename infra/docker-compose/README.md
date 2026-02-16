@@ -39,4 +39,4 @@ Example
 
 Notes
 - Environment variables still work and can override secrets if set.
-- `s8` table selection should come from message `table_id`; `S8_NOCODB_TABLE_ID` is fallback only.
+- `s8` table selection comes from message `table_id`.

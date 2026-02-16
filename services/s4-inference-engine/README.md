@@ -2,6 +2,9 @@
 
 This service runs SoulX-FlashHead inference as a Dramatiq worker.
 
+Detailed setup
+- See `SOULX_FLASHHEAD_INTEGRATION.md` for full vendor/model/flash-attn setup and Ubuntu NVIDIA container runtime requirements.
+
 ## What it does
 - Preloads SoulX pipeline once at worker startup.
 - Uses a fixed condition image from `data/imgs/girl.png` (configurable).
