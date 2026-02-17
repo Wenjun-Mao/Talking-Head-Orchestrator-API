@@ -13,7 +13,8 @@ services:
 
   s1-ingest-nocodb:
     build:
-      context: ../../services/s1-ingest-nocodb
+      context: ../..
+      dockerfile: services/s1-ingest-nocodb/Dockerfile
     ports:
       - "7101:7101"
     secrets:
@@ -156,6 +157,20 @@ services:
         condition: service_healthy
     restart: always
 
+  vector-agent:
+    image: timberio/vector:0.44.0-debian
+    command: ["--config", "/etc/vector/vector.yaml"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../observability/vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - vector-data:/vector-data-dir
+    environment:
+      - VECTOR_SIGNOZ_OTLP_HTTP_URI=http://signoz-otel-collector:4318/v1/logs
+    networks:
+      - default
+      - signoz-net
+    restart: always
+
 secrets:
   rabbitmq_url:
     file: ./secrets/rabbitmq_url
@@ -171,3 +186,11 @@ secrets:
     file: ./secrets/debug_log_payload
   chevereto_api_key:
     file: ./secrets/chevereto_api_key
+
+volumes:
+  vector-data:
+
+networks:
+  signoz-net:
+    external: true
+    name: signoz-net

@@ -87,6 +87,11 @@ Decision recommendation
 - Approve Option A and execute Phase 2a (pilot on `s1`) first.
 - This gives a low-risk proof before touching all services.
 
+Pilot status update (implemented)
+- `s1-ingest-nocodb` now builds with root Docker context and explicit Dockerfile path from compose.
+- `packages/core` is installed into `s1` image during build.
+- `s1` imports shared logger bootstrap from `core.logging`.
+
 Relationship to centralized logging Phase 2
 - This plan is a prerequisite/enabler for `docs/architecture/CENTRALIZED_LOGGING_PHASE2_PLAN.md`.
 - Shared utilities provide the mechanism to keep one logging configuration in `packages/core` and import it from all services.

@@ -1,0 +1,17 @@
+name: talking-head-observability
+
+# SigNoz is managed using the official upstream Docker deployment.
+# Bootstrap once:
+#   git clone -b main https://github.com/SigNoz/signoz.git ./vendor/signoz
+# Start stack:
+#   docker compose -f ./vendor/signoz/deploy/docker/docker-compose.yaml up -d --remove-orphans
+#
+# This local compose file exists to keep a stable place for project-specific
+# observability assets (for example Vector config, helper scripts, and docs).
+#
+# Optional helper service (disabled by default):
+services:
+  observability-doc:
+    image: alpine:3.20
+    command: ["sh", "-c", "echo 'Use vendor/signoz/deploy/docker/docker-compose.yaml to run SigNoz.' && sleep infinity"]
+    profiles: ["docs-only"]

@@ -12,14 +12,30 @@ Recommended compose layout
 - Application pipeline compose: `infra/docker-compose/docker-compose.yml`
 - Observability compose: `infra/observability/docker-compose.yml`
 
+SigNoz bootstrap (official upstream)
+1) Preferred (PowerShell):
+	- `./bootstrap-signoz.ps1`
+2) Manual alternative:
+	- `git clone -b main https://github.com/SigNoz/signoz.git ./vendor/signoz`
+	- `docker compose -f ./vendor/signoz/deploy/docker/docker-compose.yaml up -d --remove-orphans`
+3) Open UI:
+	- `http://localhost:8080`
+
+Vector wiring in this repo
+- `vector-agent` is already wired in `infra/docker-compose/docker-compose.yml`.
+- It tails Docker logs and forwards OTLP logs to:
+  - `http://host.docker.internal:4318/v1/logs`
+- Config file:
+  - `infra/observability/vector/vector.yaml`
+
 Operational model
 - Bring up observability stack first.
 - Bring up application stack second.
 - Vector forwards logs to SigNoz OTLP endpoint over Docker networking.
 
 Next implementation step
-- Add `infra/observability/docker-compose.yml` for SigNoz and document exact startup commands.
-- Then wire Vector endpoint/env in app compose/services.
+- Add shared logging bootstrap in `packages/core` and migrate `s1` to it first.
+- Validate that `record_id`/`table_id` queries work end-to-end in SigNoz.
 
 Reference
 - Architecture decision and rollout: `docs/architecture/CENTRALIZED_LOGGING_PHASE2_PLAN.md`

@@ -6,13 +6,17 @@ WORKDIR /app
 RUN python -m pip install --no-cache-dir uv
 
 # Copy project metadata first for better layer caching
-COPY pyproject.toml /app/pyproject.toml
+COPY services/s1-ingest-nocodb/pyproject.toml /app/pyproject.toml
 
 # Copy source code
-COPY src /app/src
+COPY services/s1-ingest-nocodb/src /app/src
+
+# Copy shared package source
+COPY packages/core /app/packages/core
 
 # Install runtime dependencies
 RUN uv sync --no-dev
+RUN uv pip install --python /app/.venv/bin/python /app/packages/core
 
 EXPOSE 7101
 

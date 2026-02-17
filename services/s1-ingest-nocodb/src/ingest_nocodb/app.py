@@ -4,7 +4,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import Annotated, Any, AsyncIterator, List, Optional
 
-from loguru import logger
+from core.logging import configure_service_logger, get_logger
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -15,9 +15,13 @@ from ingest_nocodb.messaging import enqueue_downstream, enqueue_ping, init_broke
 from ingest_nocodb.settings import get_settings
 
 
+logger = get_logger("s1-ingest-nocodb")
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    configure_service_logger("s1-ingest-nocodb", debug=settings.debug_log_payload)
     init_broker(settings)
     yield
 

@@ -10,8 +10,12 @@ Current services
 - s6-video-compositor
 - s7-storage-uploader
 - s8-nocodb-updater
+- vector-agent (ships container logs to SigNoz OTLP endpoint)
 
 Quick start
+0) Start SigNoz first (from `infra/observability`):
+	- `git clone -b main https://github.com/SigNoz/signoz.git ./vendor/signoz`
+	- `docker compose -f ./vendor/signoz/deploy/docker/docker-compose.yaml up -d --remove-orphans`
 1) Create secret files under infra/docker-compose/secrets:
 	- nocodb_api_key
 	- nocodb_base_url
@@ -40,3 +44,6 @@ Example
 Notes
 - Environment variables still work and can override secrets if set.
 - `s8` table selection comes from message `table_id`.
+- `vector-agent` forwards logs to `http://signoz-otel-collector:4318/v1/logs` over shared Docker network `signoz-net`.
+- `vector-agent` is a single host-level collector for all containers in this compose project (no per-service Vector sidecars).
+- Services log to stdout/stderr; they do not share an application log directory in this setup.

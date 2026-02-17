@@ -1,0 +1,78 @@
+data_dir: /vector-data-dir
+
+sources:
+  docker_logs:
+    type: docker_logs
+    auto_partial_merge: true
+
+transforms:
+  normalize_docker_log:
+    type: remap
+    inputs:
+      - docker_logs
+    source: |
+      .service = .label."com.docker.compose.service" || .container_name || "unknown"
+      .project = .label."com.docker.compose.project" || "unknown"
+      .stage = .service
+      .host = get_hostname!()
+
+      # Keep raw string body for debugging and downstream indexing.
+      .raw_message = to_string(.message) ?? ""
+
+      # Best effort JSON parse for Loguru-JSON lines.
+      parsed = parse_json(.raw_message) ?? null
+      if parsed != null {
+        .log_message = to_string(parsed.message) ?? .raw_message
+        .level = upcase(to_string(parsed.level) ?? "INFO")
+        .record_id = to_string(parsed.record_id) ?? null
+        .table_id = to_string(parsed.table_id) ?? null
+        .event = to_string(parsed.event) ?? null
+      } else {
+        .log_message = .raw_message
+        .level = "INFO"
+      }
+
+      .severity_text = .level
+
+      # Build OTLP JSON envelope expected by Vector opentelemetry sink.
+      .resourceLogs = [{
+        "resource": {
+          "attributes": [
+            { "key": "service.name", "value": { "stringValue": .service } }
+          ]
+        },
+        "scopeLogs": [{
+          "scope": {
+            "name": "vector.docker"
+          },
+          "logRecords": [{
+            "timeUnixNano": to_string(to_unix_timestamp(now(), unit: "nanoseconds")),
+            "severityText": .severity_text,
+            "body": { "stringValue": .log_message }
+          }]
+        }]
+      }]
+
+      .message = encode_json({ "resourceLogs": .resourceLogs })
+      . = { "message": .message }
+
+sinks:
+  signoz_otlp_logs:
+    type: http
+    inputs:
+      - normalize_docker_log
+    uri: ${VECTOR_SIGNOZ_OTLP_HTTP_URI:-http://host.docker.internal:4318/v1/logs}
+    method: post
+    encoding:
+      codec: raw_message
+    framing:
+      method: bytes
+    request:
+      headers:
+        content-type: application/json
+    batch:
+      max_events: 1
+    buffer:
+      type: disk
+      max_size: 536870912
+      when_full: block
