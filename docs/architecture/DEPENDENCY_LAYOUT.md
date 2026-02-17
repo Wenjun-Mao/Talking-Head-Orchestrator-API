@@ -9,3 +9,5 @@ Dependency layout
 Notes
 - Keep root-level requirements.txt absent to avoid conflating service deps.
 - Services are currently built from isolated per-service Docker build contexts. Shared runtime utilities in `packages/*` should be introduced only when build contexts/dependency wiring are updated to avoid brittle cross-service imports.
+- Detailed migration blueprint: `docs/architecture/SHARED_UTILS_PHASE2_PLAN.md`.
+- Centralized logging rollout blueprint: `docs/architecture/CENTRALIZED_LOGGING_PHASE2_PLAN.md`.
