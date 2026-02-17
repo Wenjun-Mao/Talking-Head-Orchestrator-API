@@ -167,7 +167,6 @@ services:
     environment:
       - VECTOR_SIGNOZ_OTLP_HTTP_URI=http://signoz-otel-collector:4318/v1/logs
     networks:
-      - default
       - signoz-net
     restart: always
 

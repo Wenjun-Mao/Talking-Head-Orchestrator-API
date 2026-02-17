@@ -16,10 +16,15 @@ SigNoz bootstrap (official upstream)
 1) Preferred (PowerShell):
 	- `./bootstrap-signoz.ps1`
 2) Manual alternative:
-	- `git clone -b main https://github.com/SigNoz/signoz.git ./vendor/signoz`
-	- `docker compose -f ./vendor/signoz/deploy/docker/docker-compose.yaml up -d --remove-orphans`
+  - `docker compose -p signoz -f ./signoz/docker/docker-compose.yaml up -d --remove-orphans`
 3) Open UI:
 	- `http://localhost:8080`
+
+Bundled SigNoz files in this repo
+- Minimal pinned deploy bundle lives under:
+  - `infra/observability/signoz/docker`
+  - `infra/observability/signoz/common`
+- This avoids keeping a full cloned SigNoz source repository in `vendor/`.
 
 Vector wiring in this repo
 - `vector-agent` is already wired in `infra/docker-compose/docker-compose.yml`.
