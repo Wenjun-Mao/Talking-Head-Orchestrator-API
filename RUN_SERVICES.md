@@ -1,5 +1,11 @@
 Quick service launch guide
 
+Daily ops (quick links)
+- Logging stack reproducibility runbook:
+  - `docs/architecture/LOGGING_STACK_REPRO_RUNBOOK.md`
+- Logging stack command cheatsheet (copy/paste up/down/wipe commands):
+  - `docs/architecture/LOGGING_STACK_COMMANDS.md`
+
 General
 - Every service in `services/` is active and part of the current pipeline.
 - Python services use `uv` with per-service `pyproject.toml`.

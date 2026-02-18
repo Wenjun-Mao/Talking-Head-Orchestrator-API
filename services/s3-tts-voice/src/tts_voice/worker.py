@@ -9,12 +9,16 @@ from uuid import uuid4
 import dramatiq
 import httpx
 from dramatiq.brokers.rabbitmq import RabbitmqBroker
-from loguru import logger
+from core.logging import configure_service_logger, get_logger
 
 from tts_voice.settings import get_settings
 
+
+logger = get_logger("s3-tts-voice")
+
 # Initialize settings and broker
 settings = get_settings()
+configure_service_logger("s3-tts-voice", debug=settings.debug_log_payload)
 
 _url_parts = settings.rabbitmq_url.split("@")
 _masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
@@ -124,7 +128,7 @@ def _enqueue_downstream(
 
 @dramatiq.actor(actor_name="s3_tts_voice.ping", queue_name=settings.current_queue)
 def ping() -> None:
-    logger.info("PONG! s3-tts-voice worker is alive and reachable.")
+    logger.bind(event="ping", stage="s3", queue=settings.current_queue).info("Worker ping")
 
 
 @dramatiq.actor(
@@ -140,8 +144,14 @@ def process(
     """
     Main worker process for generating TTS audio from content.
     """
-    logger.info(f"Received TTS job for record_id={record_id}")
     settings = get_settings()
+    job_logger = logger.bind(
+        event="job_received",
+        stage="s3",
+        record_id=record_id,
+        table_id=table_id,
+    )
+    job_logger.info("Received TTS job")
     
     if settings.debug_log_payload:
         args = {
@@ -150,13 +160,18 @@ def process(
             "content": _truncate_text(content),
             "douyin_video_path": douyin_video_path,
         }
-        logger.info("Job details:{}", json.dumps(args, indent=2, default=str))
+        job_logger.bind(event="job_payload_debug").info(
+            "Job details:{}",
+            json.dumps(args, indent=2, default=str),
+        )
 
     try:
         # Step 1: Request TTS Voice URL
+        job_logger.bind(event="tts_request_started").info("Requesting TTS URL")
         voice_url = _request_tts_url(settings, content)
         
         # Step 2: Download the audio file
+        job_logger.bind(event="audio_download_started").info("Downloading generated audio")
         tts_audio_path = _download_audio(
             voice_url,
             settings.output_dir,
@@ -171,12 +186,19 @@ def process(
             douyin_video_path=douyin_video_path,
             tts_audio_path=tts_audio_path,
         )
+        job_logger.bind(
+            event="downstream_enqueued",
+            queue=settings.downstream_queue,
+        ).info("Enqueued downstream message")
 
         if settings.debug_log_payload:
-            logger.info(f"Completed TTS job for record_id={record_id}. Path: {tts_audio_path}")
+            job_logger.bind(event="job_completed_debug", tts_audio_path=tts_audio_path).info(
+                "Completed TTS job"
+            )
 
     except Exception:
-        logger.bind(
+        job_logger.bind(
+            event="job_failed",
             record_id=record_id,
             content=_truncate_text(content),
         ).exception("Failed TTS job")
@@ -186,4 +208,7 @@ def process(
 
 
 # Log registered actors for verification
-logger.info(f"Worker started with actors: {[a.actor_name for a in broker.actors.values()]}")
+logger.bind(event="worker_started", stage="s3").info(
+    "Worker started with actors: {}",
+    [a.actor_name for a in broker.actors.values()],
+)

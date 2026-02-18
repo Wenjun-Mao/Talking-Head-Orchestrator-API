@@ -9,14 +9,18 @@ from uuid import uuid4
 import dramatiq
 import httpx
 from dramatiq.brokers.rabbitmq import RabbitmqBroker
-from loguru import logger
+from core.logging import configure_service_logger, get_logger
 
 from download_mp4.settings import get_settings
+
+
+logger = get_logger("s2-download-mp4")
 
 # 1. Initialize Settings and Broker at the top level
 # This ensures that when Dramatiq imports this module, the broker is already set
 # and any actors defined below will correctly bind to it.
 settings = get_settings()
+configure_service_logger("s2-download-mp4", debug=settings.debug_log_payload)
 
 # Mask password in URL for safe logging
 _url_parts = settings.rabbitmq_url.split("@")
@@ -119,7 +123,7 @@ def _enqueue_downstream(
 
 @dramatiq.actor(actor_name="s2_download_mp4.ping", queue_name=settings.current_queue)
 def ping() -> None:
-    logger.info("PONG! s2-download-mp4 worker is alive and reachable.")
+    logger.bind(event="ping", stage="s2", queue=settings.current_queue).info("Worker ping")
 
 
 @dramatiq.actor(
@@ -132,8 +136,15 @@ def process(
     url: str,
     content: str,
 ) -> None:
-    logger.info(f"Received job for record_id={record_id}")
     settings = get_settings()
+    job_logger = logger.bind(
+        event="job_received",
+        stage="s2",
+        record_id=record_id,
+        table_id=table_id,
+    )
+    job_logger.info("Received job")
+
     if settings.debug_log_payload:
         args = {
             "record_id": record_id,
@@ -141,10 +152,15 @@ def process(
             "url": url,
             "content": _truncate_text(content),
         }
-        logger.info("Received job details:\n{}", json.dumps(args, indent=2, default=str))
+        job_logger.bind(event="job_payload_debug").info(
+            "Received job details:\n{}",
+            json.dumps(args, indent=2, default=str),
+        )
 
     try:
+        job_logger.bind(event="download_url_requested").info("Requesting external download URL")
         douyin_download_url = _request_douyin_download_url(settings, url)
+        job_logger.bind(event="download_started").info("Downloading MP4")
         douyin_video_path = _download_mp4(
             douyin_download_url,
             settings.output_dir,
@@ -158,6 +174,10 @@ def process(
             content=content,
             douyin_video_path=douyin_video_path,
         )
+        job_logger.bind(
+            event="downstream_enqueued",
+            queue=settings.downstream_queue,
+        ).info("Enqueued downstream message")
 
         if settings.debug_log_payload:
             result_args = {
@@ -169,9 +189,13 @@ def process(
                 "downstream_queue": settings.downstream_queue,
                 "downstream_actor": settings.downstream_actor,
             }
-            logger.info("Completed job:\n{}", json.dumps(result_args, indent=2, default=str))
+            job_logger.bind(event="job_completed_debug").info(
+                "Completed job:\n{}",
+                json.dumps(result_args, indent=2, default=str),
+            )
     except Exception:
-        logger.bind(
+        job_logger.bind(
+            event="job_failed",
             record_id=record_id,
             url=url,
         ).exception("Failed job")
@@ -182,4 +206,7 @@ def process(
 
 
 # Log registered actors for verification
-logger.info(f"Worker started with actors: {[a.actor_name for a in broker.actors.values()]}")
+logger.bind(event="worker_started", stage="s2").info(
+    "Worker started with actors: {}",
+    [a.actor_name for a in broker.actors.values()],
+)

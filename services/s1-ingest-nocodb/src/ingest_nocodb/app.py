@@ -55,7 +55,11 @@ def _truncate_payload_text_fields(payload: Any, *, max_chars: int = 30) -> Any:
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     error_details = exc.errors()
-    logger.error("Pydantic validation failed for request to {}: {}", request.url.path, error_details)
+    logger.bind(
+        event="webhook_validation_error",
+        stage="s1",
+        path=request.url.path,
+    ).error("Invalid webhook payload", error_details=error_details)
     return JSONResponse(
         status_code=422,
         content={"detail": "Invalid webhook payload."},
@@ -96,6 +100,9 @@ class WebhookAck(BaseModel):
 async def ping() -> dict[str, str]:
     settings = get_settings()
     enqueue_ping(settings)
+    logger.bind(event="ping_enqueued", stage="s1", queue=settings.downstream_queue).info(
+        "Ping enqueued"
+    )
     return {"message": "Ping enqueued to s2"}
 
 
@@ -103,19 +110,36 @@ async def ping() -> dict[str, str]:
 async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
     settings = get_settings()
 
+    logger.bind(
+        event="webhook_received",
+        stage="s1",
+        table_id=payload.data.table_id,
+        received_rows=len(payload.data.rows),
+    ).info("Webhook received")
+
     if settings.debug_log_payload:
         payload_for_log = _truncate_payload_text_fields(payload.model_dump())
-        logger.info(
+        logger.bind(
+            event="webhook_payload_debug",
+            stage="s1",
+            table_id=payload.data.table_id,
+        ).info(
             "Received webhook request:\n{}",
             json.dumps(payload_for_log, indent=2, default=str),
         )
 
     for row in payload.data.rows:
+        row_logger = logger.bind(
+            event="row_processing",
+            stage="s1",
+            record_id=row.record_id,
+            table_id=payload.data.table_id,
+        )
+
         if settings.debug_log_payload:
             row_for_log = _truncate_payload_text_fields(row.model_dump())
-            logger.info(
-                "Processing row {}:\n{}",
-                row.record_id,
+            row_logger.info(
+                "Processing row debug payload:\n{}",
                 json.dumps(row_for_log, indent=2, default=str),
             )
 
@@ -133,7 +157,7 @@ async def webhook(payload: NocoDbWebhookPayload) -> WebhookAck:
                 "url": row.url,
                 "content": _truncate_text(row.content),
             }
-            logger.info(
+            row_logger.bind(queue=settings.downstream_queue, event="downstream_enqueued").info(
                 "Enqueued downstream message:\n{}",
                 json.dumps(msg_args, indent=2, default=str),
             )

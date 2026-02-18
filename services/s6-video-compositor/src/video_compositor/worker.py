@@ -97,6 +97,31 @@ def _probe_video_fps(path: str) -> float:
     return fps if fps > 0 else 25.0
 
 
+def _probe_total_bitrate_kbps(path: str) -> int:
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=bit_rate",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        path,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffprobe bitrate probe failed for {path}: {result.stderr}")
+
+    value = result.stdout.strip()
+    if not value:
+        return 0
+
+    try:
+        return max(0, int(round(float(value) / 1000)))
+    except ValueError:
+        return 0
+
+
 def _compose_video(
     *,
     bg_video_path: str,
@@ -108,10 +133,16 @@ def _compose_video(
     margin_y: int,
     x264_preset: str,
     x264_crf: int,
+    target_total_bitrate_mbps: float,
+    min_total_bitrate_mbps: float,
+    bitrate_step_kbps: int,
+    audio_bitrate_kbps: int,
+    max_output_size_mb: int,
 ) -> None:
     bg_duration = _probe_duration_seconds(bg_video_path)
     fg_duration = _probe_duration_seconds(fg_video_path)
     bg_fps = _probe_video_fps(bg_video_path)
+    bg_total_kbps = _probe_total_bitrate_kbps(bg_video_path)
 
     if bg_duration <= 0:
         raise RuntimeError("Background video duration is zero")
@@ -122,6 +153,11 @@ def _compose_video(
     bg_setpts_factor = target_duration / bg_duration
     is_slowdown = bg_setpts_factor > 1.0001
     bg_chain = f"[0:v]setpts=PTS*{bg_setpts_factor:.8f},fps={bg_fps:.6f}:round=near[bg]"
+
+    fallback_total_kbps = max(100, int(round(target_total_bitrate_mbps * 1000)))
+    min_total_kbps = max(100, int(round(min_total_bitrate_mbps * 1000)))
+    step_kbps = max(10, bitrate_step_kbps)
+    start_total_kbps = max(100, bg_total_kbps) if bg_total_kbps > 0 else fallback_total_kbps
 
     filter_complex = (
         f"{bg_chain};"
@@ -137,46 +173,112 @@ def _compose_video(
         "slow_down_s2" if is_slowdown else "speed_up_s2",
     )
 
-    common_cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        bg_video_path,
-        "-i",
-        fg_video_path,
-        "-i",
-        tts_audio_path,
-        "-filter_complex",
-        filter_complex,
-        "-map",
-        "[vout]",
-        "-map",
-        "2:a?",
-        "-af",
-        "apad",
-        "-t",
-        f"{target_duration:.3f}",
-        "-fps_mode",
-        "cfr",
-        "-r",
-        f"{bg_fps:.6f}",
-        "-c:v",
-        "libx264",
-        "-preset",
-        x264_preset,
-        "-crf",
-        str(x264_crf),
-        "-c:a",
-        "aac",
-        "-movflags",
-        "+faststart",
-        output_path,
-    ]
+    logger.info(
+        "S6 bitrate strategy: s2_total={} kbps, initial_total={} kbps, fallback_total={} kbps, min_total={} kbps, step={} kbps, max_output={} MB",
+        bg_total_kbps,
+        start_total_kbps,
+        fallback_total_kbps,
+        min_total_kbps,
+        step_kbps,
+        max_output_size_mb,
+    )
 
-    result = subprocess.run(common_cmd, capture_output=True, text=True)
+    attempt_total_kbps = start_total_kbps
+    attempt_idx = 0
 
-    if result.returncode != 0:
-        raise RuntimeError(f"ffmpeg compose failed: {result.stderr}")
+    while True:
+        attempt_idx += 1
+        target_audio_kbps = min(max(32, audio_bitrate_kbps), max(32, attempt_total_kbps - 100))
+        target_video_kbps = max(100, attempt_total_kbps - target_audio_kbps)
+
+        common_cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            bg_video_path,
+            "-i",
+            fg_video_path,
+            "-i",
+            tts_audio_path,
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[vout]",
+            "-map",
+            "2:a?",
+            "-af",
+            "apad",
+            "-t",
+            f"{target_duration:.3f}",
+            "-fps_mode",
+            "cfr",
+            "-r",
+            f"{bg_fps:.6f}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            x264_preset,
+            "-crf",
+            str(x264_crf),
+            "-b:v",
+            f"{target_video_kbps}k",
+            "-maxrate",
+            f"{target_video_kbps}k",
+            "-bufsize",
+            f"{target_video_kbps * 2}k",
+            "-c:a",
+            "aac",
+            "-b:a",
+            f"{target_audio_kbps}k",
+            "-movflags",
+            "+faststart",
+            output_path,
+        ]
+
+        logger.info(
+            "S6 encode attempt #{}: total={} kbps (video={} kbps, audio={} kbps)",
+            attempt_idx,
+            attempt_total_kbps,
+            target_video_kbps,
+            target_audio_kbps,
+        )
+
+        result = subprocess.run(common_cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg compose failed: {result.stderr}")
+
+        output_size_bytes = Path(output_path).stat().st_size
+        output_size_mb = output_size_bytes / (1024 * 1024)
+        if output_size_mb <= max_output_size_mb:
+            return
+
+        logger.warning(
+            "S6 encode oversize on attempt #{}: {:.2f} MB > {} MB at total={} kbps",
+            attempt_idx,
+            output_size_mb,
+            max_output_size_mb,
+            attempt_total_kbps,
+        )
+
+        if attempt_total_kbps <= min_total_kbps:
+            raise RuntimeError(
+                "ffmpeg compose exceeded max output size even at minimum bitrate: "
+                f"{output_size_mb:.2f} MB > {max_output_size_mb} MB (min_total={min_total_kbps} kbps)"
+            )
+
+        if attempt_total_kbps > fallback_total_kbps:
+            next_total_kbps = max(min_total_kbps, fallback_total_kbps)
+        else:
+            next_total_kbps = max(min_total_kbps, attempt_total_kbps - step_kbps)
+
+        if next_total_kbps >= attempt_total_kbps:
+            raise RuntimeError(
+                "Unable to reduce bitrate further while output remains oversized: "
+                f"{output_size_mb:.2f} MB > {max_output_size_mb} MB"
+            )
+
+        attempt_total_kbps = next_total_kbps
 
 
 @dramatiq.actor(actor_name="s6_video_compositor.ping", queue_name=settings.current_queue)
@@ -222,6 +324,11 @@ def process(
             margin_y=settings.overlay_margin_y,
             x264_preset=settings.x264_preset,
             x264_crf=settings.x264_crf,
+            target_total_bitrate_mbps=settings.target_total_bitrate_mbps,
+            min_total_bitrate_mbps=settings.min_total_bitrate_mbps,
+            bitrate_step_kbps=settings.bitrate_step_kbps,
+            audio_bitrate_kbps=settings.audio_bitrate_kbps,
+            max_output_size_mb=settings.max_output_size_mb,
         )
 
         logger.info("Composition complete for record_id={}, output={}", record_id, output_path)

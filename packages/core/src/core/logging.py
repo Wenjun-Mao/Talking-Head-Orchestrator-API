@@ -6,14 +6,24 @@ from loguru import logger as _logger
 
 def configure_service_logger(service_name: str, *, debug: bool = False) -> None:
     level = "DEBUG" if debug else "INFO"
+
     _logger.remove()
     _logger.configure(extra={"service": service_name})
+
     _logger.add(
-        sys.stdout,
+        sys.stderr,
         level=level,
-        serialize=True,
+        serialize=False,
         backtrace=False,
         diagnose=False,
+        colorize=False,
+        format=(
+            "{time:YYYY-MM-DD HH:mm:ss.SSS} | "
+            "{level: <8} | "
+            "{extra[service]} | "
+            "{message} | "
+            "{extra}"
+        ),
     )
 
 

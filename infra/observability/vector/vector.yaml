@@ -6,10 +6,33 @@ sources:
     auto_partial_merge: true
 
 transforms:
+  drop_rabbitmq_logs:
+    type: filter
+    inputs:
+      - docker_logs
+    condition: |
+      svc = downcase(to_string(.label."com.docker.compose.service") ?? "")
+      proj = downcase(to_string(.label."com.docker.compose.project") ?? "")
+      cname = downcase(to_string(.container_name) ?? "")
+
+      svc != "rabbitmq" &&
+      svc != "vector-agent" &&
+      svc != "signoz" &&
+      svc != "otel-collector" &&
+      svc != "clickhouse" &&
+      svc != "zookeeper-1" &&
+      svc != "schema-migrator-sync" &&
+      svc != "schema-migrator-async" &&
+      svc != "init-clickhouse" &&
+      proj != "signoz" &&
+      !starts_with(cname, "signoz-") &&
+      !contains(cname, "rabbitmq") &&
+      !contains(cname, "vector-agent")
+
   normalize_docker_log:
     type: remap
     inputs:
-      - docker_logs
+      - drop_rabbitmq_logs
     source: |
       .service = .label."com.docker.compose.service" || .container_name || "unknown"
       .project = .label."com.docker.compose.project" || "unknown"
@@ -28,8 +51,31 @@ transforms:
         .table_id = to_string(parsed.table_id) ?? null
         .event = to_string(parsed.event) ?? null
       } else {
-        .log_message = .raw_message
-        .level = "INFO"
+        # Fallback for plain text Loguru lines:
+        # YYYY-MM-DD HH:mm:ss.SSS | LEVEL | service | message | {extra}
+        text = parse_regex(.raw_message, r'^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9:.]{12} [|][ ]*(?P<level>[A-Z]+)[ ]*[|][ ]*(?P<service>[^|]+)[|][ ]*(?P<message>.*)$') ?? null
+        if text != null {
+          .level = upcase(to_string(text.level))
+          .log_message = strip_whitespace(to_string(text.message))
+
+          event_match = parse_regex(.raw_message, r'event[^:]*:[^A-Za-z0-9_-]*(?P<event>[A-Za-z0-9_-]+)') ?? null
+          if event_match != null {
+            .event = to_string(event_match.event)
+          }
+
+          record_id_match = parse_regex(.raw_message, r'record_id[^0-9]*(?P<record_id>[0-9]+)') ?? null
+          if record_id_match != null {
+            .record_id = to_string(record_id_match.record_id)
+          }
+
+          table_id_match = parse_regex(.raw_message, r'table_id[^A-Za-z0-9_-]*(?P<table_id>[A-Za-z0-9_-]+)') ?? null
+          if table_id_match != null {
+            .table_id = to_string(table_id_match.table_id)
+          }
+        } else {
+          .log_message = .raw_message
+          .level = "INFO"
+        }
       }
 
       .severity_text = .level

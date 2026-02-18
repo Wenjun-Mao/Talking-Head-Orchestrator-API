@@ -4,6 +4,7 @@ Status
 - Approved direction for this project pilot.
 - Client side: Loguru + Vector.
 - Server side: SigNoz.
+- Reproducibility runbook: `docs/architecture/LOGGING_STACK_REPRO_RUNBOOK.md`.
 
 Goals
 - Standardize structured logs across all services with one shared logging setup.

@@ -63,6 +63,37 @@ class Settings(BaseSettings):
         description="x264 CRF when using libx264",
         validation_alias=AliasChoices("S6_X264_CRF", "x264_crf"),
     )
+    target_total_bitrate_mbps: float = Field(
+        0.6,
+        description="Fallback total bitrate budget in Mbps (video + audio) when reduction is needed",
+        validation_alias=AliasChoices(
+            "S6_TARGET_TOTAL_BITRATE_MBPS",
+            "target_total_bitrate_mbps",
+        ),
+    )
+    min_total_bitrate_mbps: float = Field(
+        0.35,
+        description="Lowest allowed total bitrate in Mbps before failing",
+        validation_alias=AliasChoices(
+            "S6_MIN_TOTAL_BITRATE_MBPS",
+            "min_total_bitrate_mbps",
+        ),
+    )
+    bitrate_step_kbps: int = Field(
+        50,
+        description="Step size in kbps when reducing total bitrate across retries",
+        validation_alias=AliasChoices("S6_BITRATE_STEP_KBPS", "bitrate_step_kbps"),
+    )
+    audio_bitrate_kbps: int = Field(
+        96,
+        description="AAC audio bitrate in kbps for composed output",
+        validation_alias=AliasChoices("S6_AUDIO_BITRATE_KBPS", "audio_bitrate_kbps"),
+    )
+    max_output_size_mb: int = Field(
+        30,
+        description="Maximum allowed composed output size in MB",
+        validation_alias=AliasChoices("S6_MAX_OUTPUT_SIZE_MB", "max_output_size_mb"),
+    )
     debug_log_payload: bool = Field(
         False,
         description="Enable verbose logging",
