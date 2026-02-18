@@ -9,14 +9,14 @@ Why this location
 - Keep infra/platform tooling under `infra/` for clean ownership and lifecycle.
 
 Recommended compose layout
-- Application pipeline compose: `infra/docker-compose/docker-compose.yml`
-- Observability compose: `infra/observability/docker-compose.yml`
+- Application pipeline compose: `infra/docker-compose/compose.yaml`
+- Observability compose: `infra/observability/compose.yaml`
 
 SigNoz bootstrap (official upstream)
 1) Preferred (PowerShell):
 	- `./bootstrap-signoz.ps1`
 2) Manual alternative:
-  - `docker compose -p signoz -f ./signoz/docker/docker-compose.yaml up -d --remove-orphans`
+  - `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`
 3) Open UI:
 	- `http://localhost:8080`
 
@@ -27,7 +27,7 @@ Bundled SigNoz files in this repo
 - This avoids keeping a full cloned SigNoz source repository in `vendor/`.
 
 Vector wiring in this repo
-- `vector-agent` is already wired in `infra/docker-compose/docker-compose.yml`.
+- `vector-agent` is already wired in `infra/docker-compose/compose.yaml`.
 - It tails Docker logs and forwards OTLP logs to:
   - `http://host.docker.internal:4318/v1/logs`
 - Config file:

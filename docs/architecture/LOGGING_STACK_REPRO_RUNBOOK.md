@@ -33,7 +33,7 @@ Step 1: Start SigNoz
 - From `infra/observability`:
   - `./bootstrap-signoz.ps1`
 - Equivalent manual command:
-  - `docker compose -p signoz -f ./signoz/docker/docker-compose.yaml up -d --remove-orphans`
+  - `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`
 - UI:
   - `http://localhost:8080`
 

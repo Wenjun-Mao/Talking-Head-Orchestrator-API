@@ -15,7 +15,7 @@ Current services
 Quick start
 0) Start SigNoz first (from `infra/observability`):
 	- `./bootstrap-signoz.ps1`
-	- or `docker compose -p signoz -f ./signoz/docker/docker-compose.yaml up -d --remove-orphans`
+	- or `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`
 1) Create secret files under infra/docker-compose/secrets:
 	- nocodb_api_key
 	- nocodb_base_url

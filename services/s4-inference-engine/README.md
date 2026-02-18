@@ -29,7 +29,7 @@ Defaults in compose:
 
 ## Run
 ```bash
-docker compose -f infra/docker-compose/docker-compose.yml up -d --build s4-inference-engine
+docker compose -f infra/docker-compose/compose.yaml up -d --build s4-inference-engine
 ```
 
 ## Notes

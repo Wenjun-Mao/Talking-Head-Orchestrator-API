@@ -51,7 +51,7 @@ To keep the SigNoz dashboard clean and cost-effective, we filter out "infrastruc
 
 #### **VRL Variables in Filter**
 The filter uses the following shorthand variables defined in Vector Remap Language (VRL):
-*   **`svc`**: Short for **Service**. Extracted from the Docker Compose label `com.docker.compose.service`. This identifies the specific service name defined in your `docker-compose.yml`.
+*   **`svc`**: Short for **Service**. Extracted from the Docker Compose label `com.docker.compose.service`. This identifies the specific service name defined in your app compose file.
 *   **`proj`**: Short for **Project**. Extracted from the Docker Compose label `com.docker.compose.project`. This identifies the stack or project name (e.g., `signoz`).
 *   **`cname`**: Short for **Container Name**. Extracted from the raw `.container_name` field. This is used as a fallback or for more specific matching if labels are missing.
 
@@ -102,7 +102,7 @@ Below are explanations for the specific "knobs" used in `vector.yaml`:
 If you modify `vector.yaml`, you must restart the container to apply changes:
 
 ```bash
-docker-compose -f infra/observability/docker-compose.yml restart vector-agent
+docker compose -f infra/observability/compose.yaml restart vector-agent
 ```
 
 ### Debugging Vector

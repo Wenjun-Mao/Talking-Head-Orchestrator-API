@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$signozCompose = Join-Path $scriptDir "signoz/docker/docker-compose.yaml"
+$signozCompose = Join-Path $scriptDir "signoz/docker/compose.yaml"
 
 if (!(Test-Path $signozCompose)) {
     throw "SigNoz compose file not found: $signozCompose"

@@ -110,8 +110,8 @@ Configured by compose env:
 
 From repo root:
 ```bash
-docker compose -f infra/docker-compose/docker-compose.yml up -d --build s4-inference-engine
-docker compose -f infra/docker-compose/docker-compose.yml logs -f --tail=200 s4-inference-engine
+docker compose -f infra/docker-compose/compose.yaml up -d --build s4-inference-engine
+docker compose -f infra/docker-compose/compose.yaml logs -f --tail=200 s4-inference-engine
 ```
 
 ## 8) What “healthy enough” looks like

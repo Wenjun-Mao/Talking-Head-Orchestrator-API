@@ -6,28 +6,28 @@ Purpose
 
 Conventions
 - Run from repository root unless noted.
-- SigNoz compose file: `infra/observability/signoz/docker/docker-compose.yaml`
-- App compose file: `infra/docker-compose/docker-compose.yml`
+- SigNoz compose file: `infra/observability/signoz/docker/compose.yaml`
+- App compose file: `infra/docker-compose/compose.yaml`
 - SigNoz compose project name is fixed as `signoz`.
 
 Start (keep existing logs/data)
 1) Start SigNoz first:
-- `docker compose -p signoz -f infra/observability/signoz/docker/docker-compose.yaml up -d --remove-orphans`
+- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml up -d --remove-orphans`
 
 2) Start app stack:
-- `docker compose -f infra/docker-compose/docker-compose.yml up -d --build`
+- `docker compose -f infra/docker-compose/compose.yaml up -d --build`
 
 Stop (keep existing logs/data)
 1) Stop app stack:
-- `docker compose -f infra/docker-compose/docker-compose.yml down`
+- `docker compose -f infra/docker-compose/compose.yaml down`
 
 2) Stop SigNoz stack (volumes preserved):
-- `docker compose -p signoz -f infra/observability/signoz/docker/docker-compose.yaml down`
+- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml down`
 
 RabbitMQ-only restart note
 - If you recreate only RabbitMQ, some workers may reconnect before their queues are re-declared and emit temporary `queue not_found` churn.
 - Prefer restarting app workers together after RabbitMQ recreation:
-  - `docker compose -f infra/docker-compose/docker-compose.yml up -d --force-recreate rabbitmq s1-ingest-nocodb s2-download-mp4 s3-tts-voice s4-inference-engine s5-broll-selector s6-video-compositor s7-storage-uploader s8-nocodb-updater`
+  - `docker compose -f infra/docker-compose/compose.yaml up -d --force-recreate rabbitmq s1-ingest-nocodb s2-download-mp4 s3-tts-voice s4-inference-engine s5-broll-selector s6-video-compositor s7-storage-uploader s8-nocodb-updater`
 
 Full reset (wipe previous logs/data)
 Warning
@@ -35,26 +35,26 @@ Warning
 - Use only when you intentionally want a clean observability state.
 
 1) Stop app stack:
-- `docker compose -f infra/docker-compose/docker-compose.yml down`
+- `docker compose -f infra/docker-compose/compose.yaml down`
 
 2) Stop SigNoz and delete its volumes:
-- `docker compose -p signoz -f infra/observability/signoz/docker/docker-compose.yaml down -v`
+- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml down -v`
 
 3) (Optional) remove Vector local disk buffer volume:
-- `docker compose -f infra/docker-compose/docker-compose.yml down -v`
+- `docker compose -f infra/docker-compose/compose.yaml down -v`
 
 4) Start fresh:
-- `docker compose -p signoz -f infra/observability/signoz/docker/docker-compose.yaml up -d --remove-orphans`
-- `docker compose -f infra/docker-compose/docker-compose.yml up -d --build`
+- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml up -d --remove-orphans`
+- `docker compose -f infra/docker-compose/compose.yaml up -d --build`
 
 Health checks
 - SigNoz UI: `http://localhost:8080`
 - SigNoz containers:
   - `docker ps --format "table {{.Names}}\t{{.Status}}" | Select-String "signoz|NAMES"`
 - App containers:
-  - `docker compose -f infra/docker-compose/docker-compose.yml ps`
+  - `docker compose -f infra/docker-compose/compose.yaml ps`
 - Vector recent errors:
-  - `docker compose -f infra/docker-compose/docker-compose.yml logs --since=2m vector-agent | Select-String "Bad Request|HTTP error|Events dropped|Not retriable|ERROR|error"`
+  - `docker compose -f infra/docker-compose/compose.yaml logs --since=2m vector-agent | Select-String "Bad Request|HTTP error|Events dropped|Not retriable|ERROR|error"`
 
 Where SigNoz data is stored
 - `signoz-clickhouse` (log/trace/metric data)

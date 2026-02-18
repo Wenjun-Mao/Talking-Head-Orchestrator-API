@@ -8,7 +8,7 @@ Dependency layout
 
 Current shared-runtime wiring
 - `packages/core` is installed into `s1` and `s3` to `s8` container images.
-- `s4` to `s8` Docker builds now use repo-root build context (`infra/docker-compose/docker-compose.yml`) so `packages/core` can be copied during image build.
+- `s4` to `s8` Docker builds now use repo-root build context (`infra/docker-compose/compose.yaml`) so `packages/core` can be copied during image build.
 - Root `.dockerignore` limits context transfer to `services/**` and `packages/**` (while excluding large runtime data and model artifact directories).
 
 Notes

@@ -85,10 +85,10 @@ uv run pytest
 
 ```bash
 # Start the full stack
-docker-compose -f infra/docker-compose/docker-compose.yml up -d
+docker compose -f infra/docker-compose/compose.yaml up -d
 
 # Build specific services
-docker-compose -f infra/docker-compose/docker-compose.yml build s1-ingest-nocodb
+docker compose -f infra/docker-compose/compose.yaml build s1-ingest-nocodb
 ```
 
 ## Setup Notes
