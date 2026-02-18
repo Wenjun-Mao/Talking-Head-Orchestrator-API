@@ -37,3 +37,13 @@ Current pipeline
 
 Contract note
 - `table_id` from the webhook is propagated end-to-end and used by `s8` at runtime to choose the NocoDB table.
+
+Phase 2 verification checklist
+- Rebuild and restart observability + workers (`s4` to `s8`) after logger/filter changes:
+  - `docker compose -f infra/docker-compose/docker-compose.yml up -d --build s4-inference-engine s5-broll-selector s6-video-compositor s7-storage-uploader s8-nocodb-updater`
+  - `docker compose -f infra/docker-compose/docker-compose.yml up -d --force-recreate vector-agent`
+- Run one smoke webhook using Bruno payload (`docs/bruno/talking-head-api-local-test/local webhook real data.yml`) or equivalent JSON to `POST http://localhost:7101/webhook`.
+- Verify local container flow by `record_id` across `s1` to `s8` with `docker logs`.
+- Verify SigNoz ingestion freshness with ClickHouse:
+  - `docker exec signoz-clickhouse clickhouse-client -q "SELECT fromUnixTimestamp64Nano(toInt64(max(timestamp))) FROM signoz_logs.logs_v2"`
+  - `docker exec signoz-clickhouse clickhouse-client -q "SELECT resources_string['service.name'], count() FROM signoz_logs.logs_v2 WHERE timestamp > toUInt64(toUnixTimestamp(now() - INTERVAL 10 MINUTE) * 1000000000) GROUP BY resources_string['service.name'] ORDER BY resources_string['service.name']"`

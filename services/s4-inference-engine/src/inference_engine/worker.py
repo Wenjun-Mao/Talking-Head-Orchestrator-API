@@ -4,19 +4,21 @@ import os
 from typing import Any
 
 import dramatiq
+from core.logging import configure_service_logger, get_logger
 from dramatiq.brokers.rabbitmq import RabbitmqBroker
-from loguru import logger
 
 from inference_engine.settings import get_settings
 from inference_engine.soulx_runtime import SoulXRuntime
 
 # Initialize settings and broker
 settings = get_settings()
+configure_service_logger("s4-inference-engine", debug=settings.debug_log_payload)
+logger = get_logger("s4-inference-engine")
 
 _url_parts = settings.rabbitmq_url.split("@")
 _masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
 
-logger.info(
+logger.bind(event="worker_init", stage="s4").info(
     "Initializing s4-inference-engine worker (broker={}, current_queue={}, downstream_queue={}, model_type={})",
     _masked_url,
     settings.current_queue,
@@ -35,7 +37,7 @@ runtime = SoulXRuntime(
 )
 
 if settings.startup_prewarm_enabled:
-    logger.info(
+    logger.bind(event="startup_prewarm_enabled", stage="s4").info(
         "S4 startup prewarm enabled (duration_sec={})",
         settings.startup_prewarm_duration_sec,
     )
@@ -46,7 +48,7 @@ if settings.startup_prewarm_enabled:
         duration_sec=settings.startup_prewarm_duration_sec,
     )
 else:
-    logger.info("S4 startup prewarm disabled")
+    logger.bind(event="startup_prewarm_disabled", stage="s4").info("S4 startup prewarm disabled")
 
 
 def _enqueue_downstream(
@@ -76,7 +78,7 @@ def _enqueue_downstream(
 
 @dramatiq.actor(actor_name="s4_inference_engine.ping", queue_name=settings.current_queue)
 def ping() -> None:
-    logger.info("PONG! s4-inference-engine worker is alive.")
+    logger.bind(event="ping", stage="s4", queue=settings.current_queue).info("Worker ping")
 
 
 @dramatiq.actor(
@@ -89,11 +91,17 @@ def process(
     douyin_video_path: str,
     tts_audio_path: str,
 ) -> None:
-    logger.info(f"Received inference job for record_id={record_id}")
     settings = get_settings()
+    job_logger = logger.bind(
+        event="job_received",
+        stage="s4",
+        record_id=record_id,
+        table_id=table_id,
+    )
+    job_logger.info("Received inference job")
 
     if settings.debug_log_payload:
-        logger.info(
+        job_logger.bind(event="job_payload_debug").info(
             "Inputs: record_id={}, tts_audio={}, cond_image={}, source_video={}, model_type={}",
             record_id,
             tts_audio_path,
@@ -113,7 +121,9 @@ def process(
             audio_encode_mode=settings.audio_encode_mode,
         )
 
-        logger.info("SoulX inference complete. Output: {}", inference_video_path)
+        job_logger.bind(event="inference_completed", inference_video_path=inference_video_path).info(
+            "SoulX inference complete"
+        )
 
         # Enqueue for downstream (s5-broll-selector)
         _enqueue_downstream(
@@ -124,12 +134,18 @@ def process(
             tts_audio_path=tts_audio_path,
             inference_video_path=inference_video_path,
         )
+        job_logger.bind(event="downstream_enqueued", queue=settings.downstream_queue).info(
+            "Enqueued downstream message"
+        )
 
     except Exception:
-        logger.exception(f"Failed SoulX inference for record_id={record_id}")
+        job_logger.bind(event="job_failed").exception("Failed SoulX inference")
         raise
     finally:
         os.sync() if hasattr(os, "sync") else None
 
 
-logger.info(f"Worker started with actors: {[a.actor_name for a in broker.actors.values()]}")
+logger.bind(event="worker_started", stage="s4").info(
+    "Worker started with actors: {}",
+    [a.actor_name for a in broker.actors.values()],
+)

@@ -2,7 +2,7 @@
 name = "core"
 version = "0.1.0"
 description = "Shared runtime utilities for Talking Head Orchestrator services"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
   "loguru>=0.7.2",
 ]

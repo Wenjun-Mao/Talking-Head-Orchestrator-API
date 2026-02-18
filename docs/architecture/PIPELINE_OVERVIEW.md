@@ -14,6 +14,12 @@ Queueing
 - `record_id` and webhook `table_id` are propagated through all stages.
 - `s8` uses runtime `table_id` from message payload.
 
+Observability notes (Phase 2)
+- `s1` to `s8` now emit standardized Loguru text format with structured `extra` fields (`service`, `event`, `stage`, `record_id`, `table_id` where applicable).
+- `s4` to `s8` use the shared logger implementation in `packages/core/src/core/logging.py`.
+- SigNoz ingestion is container-stdout based via Vector `docker_logs`; this is why `s4` to `s8` logs were visible in SigNoz even before service-level logger refactor.
+- Vector now drops noisy high-frequency `s4` generation timing lines before OTLP shipping (`[generate] ...` and `SoulX generated chunk ...`).
+
 Implementation notes
 - For full `s4` setup (vendor source, models, FlashAttention wheel, Ubuntu NVIDIA toolkit), see `services/s4-inference-engine/SOULX_FLASHHEAD_INTEGRATION.md`.
 

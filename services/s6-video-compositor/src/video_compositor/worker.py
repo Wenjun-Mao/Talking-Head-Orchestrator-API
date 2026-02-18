@@ -8,17 +8,19 @@ from typing import Any
 from uuid import uuid4
 
 import dramatiq
+from core.logging import configure_service_logger, get_logger
 from dramatiq.brokers.rabbitmq import RabbitmqBroker
-from loguru import logger
 
 from video_compositor.settings import get_settings
 
 settings = get_settings()
+configure_service_logger("s6-video-compositor", debug=settings.debug_log_payload)
+logger = get_logger("s6-video-compositor")
 
 _url_parts = settings.rabbitmq_url.split("@")
 _masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
 
-logger.info(
+logger.bind(event="worker_init", stage="s6").info(
     "Initializing s6-video-compositor worker (broker={}, current_queue={}, downstream_queue={})",
     _masked_url,
     settings.current_queue,
@@ -283,7 +285,7 @@ def _compose_video(
 
 @dramatiq.actor(actor_name="s6_video_compositor.ping", queue_name=settings.current_queue)
 def ping() -> None:
-    logger.info("PONG! s6-video-compositor worker is alive.")
+    logger.bind(event="ping", stage="s6", queue=settings.current_queue).info("Worker ping")
 
 
 @dramatiq.actor(actor_name="s6_video_compositor.process", queue_name=settings.current_queue)
@@ -294,8 +296,14 @@ def process(
     tts_audio_path: str,
     inference_video_path: str,
 ) -> None:
-    logger.info("Received composition job for record_id={}", record_id)
     settings = get_settings()
+    job_logger = logger.bind(
+        event="job_received",
+        stage="s6",
+        record_id=record_id,
+        table_id=table_id,
+    )
+    job_logger.info("Received composition job")
 
     if settings.debug_log_payload:
         payload = {
@@ -308,7 +316,10 @@ def process(
             "margin_x": settings.overlay_margin_x,
             "margin_y": settings.overlay_margin_y,
         }
-        logger.info("Composition payload:\n{}", json.dumps(payload, ensure_ascii=False, indent=2))
+        job_logger.bind(event="job_payload_debug").info(
+            "Composition payload:\n{}",
+            json.dumps(payload, ensure_ascii=False, indent=2),
+        )
 
     try:
         Path(settings.output_dir).mkdir(parents=True, exist_ok=True)
@@ -331,7 +342,9 @@ def process(
             max_output_size_mb=settings.max_output_size_mb,
         )
 
-        logger.info("Composition complete for record_id={}, output={}", record_id, output_path)
+        job_logger.bind(event="composition_completed", output_path=output_path).info(
+            "Composition complete"
+        )
 
         _enqueue_downstream(
             settings,
@@ -339,11 +352,17 @@ def process(
             table_id,
             output_path,
         )
+        job_logger.bind(event="downstream_enqueued", queue=settings.downstream_queue).info(
+            "Enqueued downstream message"
+        )
     except Exception:
-        logger.exception("Failed composition for record_id={}", record_id)
+        job_logger.bind(event="job_failed").exception("Failed composition")
         raise
     finally:
         os.sync() if hasattr(os, "sync") else None
 
 
-logger.info(f"Worker started with actors: {[a.actor_name for a in broker.actors.values()]}")
+logger.bind(event="worker_started", stage="s6").info(
+    "Worker started with actors: {}",
+    [a.actor_name for a in broker.actors.values()],
+)

@@ -232,7 +232,7 @@ class SoulXRuntime:
 		video = self.flash_inference.run_pipeline(self.pipeline, audio_embedding)
 		if torch.cuda.is_available():
 			torch.cuda.synchronize()
-		logger.info("SoulX generated chunk {}", chunk_idx)
+		logger.debug("SoulX generated chunk {}", chunk_idx)
 		return video.cpu()
 
 	@staticmethod

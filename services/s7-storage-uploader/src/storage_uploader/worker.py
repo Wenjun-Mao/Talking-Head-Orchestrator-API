@@ -6,18 +6,20 @@ from pathlib import Path
 from typing import Any
 
 import dramatiq
+from core.logging import configure_service_logger, get_logger
 import requests
 from dramatiq.brokers.rabbitmq import RabbitmqBroker
-from loguru import logger
 
 from storage_uploader.settings import get_settings
 
 settings = get_settings()
+configure_service_logger("s7-storage-uploader", debug=settings.debug_log_payload)
+logger = get_logger("s7-storage-uploader")
 
 _url_parts = settings.rabbitmq_url.split("@")
 _masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
 
-logger.info(
+logger.bind(event="worker_init", stage="s7").info(
     "Initializing s7-storage-uploader worker (broker={}, current_queue={}, downstream_queue={}, chevereto_base_url={})",
     _masked_url,
     settings.current_queue,
@@ -26,7 +28,7 @@ logger.info(
 )
 
 if not settings.chevereto_album_id.strip():
-    logger.warning(
+    logger.bind(event="album_unset_warning", stage="s7").warning(
         "S7_CHEVERETO_ALBUM_ID is not set; uploads won't be assigned to a specific album (album name '{}' is informational only)",
         settings.chevereto_album_name,
     )
@@ -94,7 +96,7 @@ def _upload_to_chevereto(
 
 @dramatiq.actor(actor_name="s7_storage_uploader.ping", queue_name=settings.current_queue)
 def ping() -> None:
-    logger.info("PONG! s7-storage-uploader worker is alive.")
+    logger.bind(event="ping", stage="s7", queue=settings.current_queue).info("Worker ping")
 
 
 @dramatiq.actor(actor_name="s7_storage_uploader.process", queue_name=settings.current_queue)
@@ -103,15 +105,21 @@ def process(
     table_id: str,
     composited_video_path: str,
 ) -> None:
-    logger.info("Received upload job for record_id={}", record_id)
     settings = get_settings()
+    job_logger = logger.bind(
+        event="job_received",
+        stage="s7",
+        record_id=record_id,
+        table_id=table_id,
+    )
+    job_logger.info("Received upload job")
 
     video_path = Path(composited_video_path)
     if not video_path.exists():
         raise FileNotFoundError(f"Composited video not found: {video_path}")
 
     if settings.debug_log_payload:
-        logger.info(
+        job_logger.bind(event="job_payload_debug").info(
             "Upload inputs: record_id={}, composited_video_path={}, album_id={}, album_name={}, expiration={}",
             record_id,
             composited_video_path,
@@ -139,23 +147,28 @@ def process(
         if ".mp4" not in public_mp4_url.lower():
             raise RuntimeError(f"Chevereto response URL is not an mp4 URL: {public_mp4_url}")
 
-        logger.info(
-            "Upload complete for record_id={}, public_url={}, expiration_date_gmt={}",
-            record_id,
-            public_mp4_url,
-            expiration_date_gmt,
-        )
+        job_logger.bind(
+            event="upload_completed",
+            public_url=public_mp4_url,
+            expiration_date_gmt=expiration_date_gmt,
+        ).info("Upload complete")
         _enqueue_downstream(
             settings,
             record_id,
             table_id,
             public_mp4_url,
         )
+        job_logger.bind(event="downstream_enqueued", queue=settings.downstream_queue).info(
+            "Enqueued downstream message"
+        )
     except Exception:
-        logger.exception("Failed upload for record_id={}", record_id)
+        job_logger.bind(event="job_failed").exception("Failed upload")
         raise
     finally:
         os.sync() if hasattr(os, "sync") else None
 
 
-logger.info(f"Worker started with actors: {[a.actor_name for a in broker.actors.values()]}")
+logger.bind(event="worker_started", stage="s7").info(
+    "Worker started with actors: {}",
+    [a.actor_name for a in broker.actors.values()],
+)

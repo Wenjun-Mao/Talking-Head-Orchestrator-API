@@ -10,11 +10,13 @@ RUN apt-get update \
 
 RUN python -m pip install --no-cache-dir uv
 
-COPY pyproject.toml /app/pyproject.toml
-COPY src /app/src
-COPY vendor /app/vendor
+COPY services/s4-inference-engine/pyproject.toml /app/pyproject.toml
+COPY services/s4-inference-engine/src /app/src
+COPY services/s4-inference-engine/vendor /app/vendor
+COPY packages/core /app/packages/core
 
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
+RUN uv pip install --python /app/.venv/bin/python /app/packages/core
 
 RUN --mount=type=cache,target=/root/.cache/uv uv pip install --python /app/.venv/bin/python --index-url https://download.pytorch.org/whl/cu128 torch==2.7.1 torchvision==0.22.1 \
 	&& uv pip install --python /app/.venv/bin/python -r /app/vendor/SoulX-FlashHead/requirements.txt \

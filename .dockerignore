@@ -1,0 +1,9 @@
+*
+
+!services/
+!services/**
+!packages/
+!packages/**
+
+services/s4-inference-engine/vendor/SoulX-FlashHead/models/
+data/

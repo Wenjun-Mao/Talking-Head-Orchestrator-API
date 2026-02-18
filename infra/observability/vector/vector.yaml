@@ -29,10 +29,19 @@ transforms:
       !contains(cname, "rabbitmq") &&
       !contains(cname, "vector-agent")
 
+  drop_s4_generate_noise:
+    type: filter
+    inputs:
+      - drop_rabbitmq_logs
+    condition: |
+      svc = downcase(to_string(.label."com.docker.compose.service") ?? "")
+      msg = to_string(.message) ?? ""
+      !(svc == "s4-inference-engine" && match(msg, r'\[generate\] (model denoise per step|decode video frames|color correction|encode motion frames)|SoulX generated chunk'))
+
   normalize_docker_log:
     type: remap
     inputs:
-      - drop_rabbitmq_logs
+      - drop_s4_generate_noise
     source: |
       .service = .label."com.docker.compose.service" || .container_name || "unknown"
       .project = .label."com.docker.compose.project" || "unknown"

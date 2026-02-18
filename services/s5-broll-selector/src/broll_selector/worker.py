@@ -5,17 +5,19 @@ import os
 from typing import Any
 
 import dramatiq
+from core.logging import configure_service_logger, get_logger
 from dramatiq.brokers.rabbitmq import RabbitmqBroker
-from loguru import logger
 
 from broll_selector.settings import get_settings
 
 settings = get_settings()
+configure_service_logger("s5-broll-selector", debug=settings.debug_log_payload)
+logger = get_logger("s5-broll-selector")
 
 _url_parts = settings.rabbitmq_url.split("@")
 _masked_url = _url_parts[-1] if len(_url_parts) > 1 else settings.rabbitmq_url
 
-logger.info(
+logger.bind(event="worker_init", stage="s5").info(
     "Initializing s5-broll-selector worker (broker={}, current_queue={}, downstream_queue={})",
     _masked_url,
     settings.current_queue,
@@ -41,7 +43,7 @@ def _enqueue_downstream(settings: Any, *args: Any) -> None:
 
 @dramatiq.actor(actor_name="s5_broll_selector.ping", queue_name=settings.current_queue)
 def ping() -> None:
-    logger.info("PONG! s5-broll-selector worker is alive.")
+    logger.bind(event="ping", stage="s5", queue=settings.current_queue).info("Worker ping")
 
 
 @dramatiq.actor(actor_name="s5_broll_selector.process", queue_name=settings.current_queue)
@@ -52,8 +54,14 @@ def process(
     tts_audio_path: str,
     inference_video_path: str,
 ) -> None:
-    logger.info("Received broll job for record_id={} (pass-through mode)", record_id)
     settings = get_settings()
+    job_logger = logger.bind(
+        event="job_received",
+        stage="s5",
+        record_id=record_id,
+        table_id=table_id,
+    )
+    job_logger.info("Received broll job (pass-through mode)")
 
     if settings.debug_log_payload:
         payload = {
@@ -63,7 +71,10 @@ def process(
             "tts_audio_path": tts_audio_path,
             "inference_video_path": inference_video_path,
         }
-        logger.info("Pass-through payload:\n{}", json.dumps(payload, ensure_ascii=False, indent=2))
+        job_logger.bind(event="job_payload_debug").info(
+            "Pass-through payload:\n{}",
+            json.dumps(payload, ensure_ascii=False, indent=2),
+        )
 
     try:
         _enqueue_downstream(
@@ -74,12 +85,17 @@ def process(
             tts_audio_path,
             inference_video_path,
         )
-        logger.info("Pass-through complete for record_id={}", record_id)
+        job_logger.bind(event="downstream_enqueued", queue=settings.downstream_queue).info(
+            "Pass-through complete"
+        )
     except Exception:
-        logger.exception("Failed pass-through for record_id={}", record_id)
+        job_logger.bind(event="job_failed").exception("Failed pass-through")
         raise
     finally:
         os.sync() if hasattr(os, "sync") else None
 
 
-logger.info(f"Worker started with actors: {[a.actor_name for a in broker.actors.values()]}")
+logger.bind(event="worker_started", stage="s5").info(
+    "Worker started with actors: {}",
+    [a.actor_name for a in broker.actors.values()],
+)

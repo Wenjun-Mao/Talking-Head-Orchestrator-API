@@ -70,7 +70,8 @@ services:
 
   s4-inference-engine:
     build:
-      context: ../../services/s4-inference-engine
+      context: ../..
+      dockerfile: services/s4-inference-engine/Dockerfile
     environment:
       - S4_QUEUE=s4-inference-engine
       - S4_FLASHHEAD_CKPT_DIR=/models/SoulX-FlashHead-1_3B
@@ -94,7 +95,8 @@ services:
 
   s5-broll-selector:
     build:
-      context: ../../services/s5-broll-selector
+      context: ../..
+      dockerfile: services/s5-broll-selector/Dockerfile
     environment:
       - S5_QUEUE=s5-broll-selector
     volumes:
@@ -111,7 +113,8 @@ services:
 
   s6-video-compositor:
     build:
-      context: ../../services/s6-video-compositor
+      context: ../..
+      dockerfile: services/s6-video-compositor/Dockerfile
     environment:
       - S6_QUEUE=s6-video-compositor
       - S6_TARGET_TOTAL_BITRATE_MBPS=0.6
@@ -133,7 +136,8 @@ services:
 
   s7-storage-uploader:
     build:
-      context: ../../services/s7-storage-uploader
+      context: ../..
+      dockerfile: services/s7-storage-uploader/Dockerfile
     environment:
       - S7_QUEUE=s7-storage-uploader
       - S7_CHEVERETO_BASE_URL=https://imagor.wanyouwan.cn
@@ -153,7 +157,8 @@ services:
 
   s8-nocodb-updater:
     build:
-      context: ../../services/s8-nocodb-updater
+      context: ../..
+      dockerfile: services/s8-nocodb-updater/Dockerfile
     environment:
       - S8_QUEUE=s8-nocodb-updater
       - S8_UPDATE_FIELD_NAME=chengpinurl
