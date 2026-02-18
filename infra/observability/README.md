@@ -10,14 +10,12 @@ Why this location
 
 Recommended compose layout
 - Application pipeline compose: `infra/docker-compose/compose.yaml`
-- Observability compose: `infra/observability/compose.yaml`
+- SigNoz compose: `infra/observability/signoz/docker/compose.yaml`
 
 SigNoz bootstrap (official upstream)
-1) Preferred (PowerShell):
-	- `./bootstrap-signoz.ps1`
-2) Manual alternative:
+1) Start stack:
   - `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`
-3) Open UI:
+2) Open UI:
 	- `http://localhost:8080`
 
 Bundled SigNoz files in this repo

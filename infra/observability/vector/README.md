@@ -102,7 +102,7 @@ Below are explanations for the specific "knobs" used in `vector.yaml`:
 If you modify `vector.yaml`, you must restart the container to apply changes:
 
 ```bash
-docker compose -f infra/observability/compose.yaml restart vector-agent
+docker compose -f infra/docker-compose/compose.yaml restart vector-agent
 ```
 
 ### Debugging Vector

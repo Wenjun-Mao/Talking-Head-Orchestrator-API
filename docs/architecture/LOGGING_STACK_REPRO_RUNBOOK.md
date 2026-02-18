@@ -31,8 +31,6 @@ Prerequisites
 
 Step 1: Start SigNoz
 - From `infra/observability`:
-  - `./bootstrap-signoz.ps1`
-- Equivalent manual command:
   - `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`
 - UI:
   - `http://localhost:8080`
@@ -62,7 +60,7 @@ Troubleshooting shortcuts
 - If Vector shows DNS lookup failures for `signoz-otel-collector`:
   - ensure `vector-agent` is attached to `signoz-net`.
 - If collector errors mention connection/receiver issues:
-  - restart SigNoz via `./bootstrap-signoz.ps1`.
+  - restart SigNoz via `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`.
   - check collector startup logs contain both:
     - `Starting GRPC server ... [::]:4317`
     - `Starting HTTP server ... [::]:4318`

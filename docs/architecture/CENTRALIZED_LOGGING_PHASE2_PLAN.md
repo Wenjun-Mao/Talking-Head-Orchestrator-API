@@ -21,7 +21,7 @@ Where SigNoz should live
 - Place observability infrastructure under `infra/observability/`.
 - Keep it as a separate compose stack from the app pipeline compose:
   - app pipeline: `infra/docker-compose/compose.yaml`
-  - observability stack: `infra/observability/compose.yaml`
+  - observability stack: `infra/observability/signoz/docker/compose.yaml`
 
 Why separate stack (recommended)
 - Clear ownership boundary: app services vs platform tooling.
