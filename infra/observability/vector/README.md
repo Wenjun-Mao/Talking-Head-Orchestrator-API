@@ -74,8 +74,15 @@ Extracting these into top-level fields allows for powerful filtering and "trace-
 #### **C. OpenTelemetry (OTLP) Mapping**
 SigNoz requires logs in the OTLP format. Vector dynamically constructs a JSON envelope that maps our internal fields to standard OTLP attributes:
 *   `.service` → `service.name`
+*   project identity → `project.name` and `service.namespace`
+*   environment → `deployment.environment`
+*   traceability fields → `record_id`, `table_id`, `event`, `stage` as log attributes
 *   `.level` → `severityText`
 *   `.log_message` → `body`
+
+#### **D. Timestamp Policy**
+`timeUnixNano` is derived from the Docker event timestamp (`.timestamp`) with a fallback to `now()`.
+This preserves original log time during short collector restarts or backpressure, so delayed delivery does not rewrite event chronology.
 
 ### 4. Shipping (`sinks`)
 *   **`signoz_otlp_logs`**: Forwards the OTLP-wrapped logs to the SigNoz collector via HTTP.
@@ -95,6 +102,7 @@ Below are explanations for the specific "knobs" used in `vector.yaml`:
 *   **`auto_partial_merge: true`**: In Docker, very long log lines are often split into multiple chunks (e.g., if they exceed 16KB). Setting this to `true` tells Vector to automatically reassemble these split messages into a single coherent log entry before processing.
 *   **`codec: raw_message`**: Used in the SigNoz sink to tell Vector *not* to add its own wrapping (like its default JSON structure) when sending data. We use this because we manually built the required OTLP JSON envelope in the `remap` stage.
 *   **`uri: ${VARIABLE:-default}`**: This syntax allows the configuration to be dynamic. It will use the environment variable `VECTOR_SIGNOZ_OTLP_HTTP_URI` if it exists; otherwise, it falls back to the local Docker networking address (`http://host.docker.internal:4318/v1/logs`).
+*   **`VECTOR_PROJECT_NAME`** / **`VECTOR_DEPLOYMENT_ENV`**: Environment variables used to stamp project and environment metadata onto every log for cross-project filtering in a shared SigNoz.
 
 ## Operations
 
@@ -109,5 +117,5 @@ docker compose -f infra/docker-compose/compose.yaml restart vector-agent
 To see if Vector is having trouble parsing logs or reaching SigNoz:
 
 ```bash
-docker logs -f vector-agent
+docker logs -f docker-compose-vector-agent-1
 ```

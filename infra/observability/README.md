@@ -25,11 +25,15 @@ Bundled SigNoz files in this repo
 - This avoids keeping a full cloned SigNoz source repository in `vendor/`.
 
 Vector wiring in this repo
-- `vector-agent` is already wired in `infra/docker-compose/compose.yaml`.
+- `vector-agent` is wired in this project's app stack (`infra/docker-compose/compose.yaml`).
 - It tails Docker logs and forwards OTLP logs to:
-  - `http://host.docker.internal:4318/v1/logs`
+  - `http://signoz-otel-collector:4318/v1/logs`
 - Config file:
   - `infra/observability/vector/vector.yaml`
+
+Multi-project model
+- SigNoz is shared infrastructure.
+- Each project runs its own `vector-agent` in its own stack and points to this SigNoz collector.
 
 Operational model
 - Bring up observability stack first.

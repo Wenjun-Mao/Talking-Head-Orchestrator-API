@@ -1,0 +1,11 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "2m": true,
+        "3m": true,
+        "10m": true,
+        "docker exec": true,
+        "docker rm": true,
+        "1m": true,
+        "10s": true
+    }
+}

@@ -43,10 +43,18 @@ transforms:
     inputs:
       - drop_s4_generate_noise
     source: |
-      .service = .label."com.docker.compose.service" || .container_name || "unknown"
-      .project = .label."com.docker.compose.project" || "unknown"
+      .service = to_string(.label."com.docker.compose.service") ?? to_string(.container_name) ?? "unknown"
+      .project = to_string(.label."com.docker.compose.project") ?? "unknown"
+      .project_name = .project
+      if .project_name == "" || .project_name == "unknown" || .project_name == "docker-compose" {
+        .project_name = "${VECTOR_PROJECT_NAME:-talking-head-orchestrator-api}"
+      }
+      .deployment_environment = "${VECTOR_DEPLOYMENT_ENV:-local}"
       .stage = .service
       .host = get_hostname!()
+      .record_id = ""
+      .table_id = ""
+      .event = ""
 
       # Keep raw string body for debugging and downstream indexing.
       .raw_message = to_string(.message) ?? ""
@@ -56,9 +64,9 @@ transforms:
       if parsed != null {
         .log_message = to_string(parsed.message) ?? .raw_message
         .level = upcase(to_string(parsed.level) ?? "INFO")
-        .record_id = to_string(parsed.record_id) ?? null
-        .table_id = to_string(parsed.table_id) ?? null
-        .event = to_string(parsed.event) ?? null
+        .record_id = to_string(parsed.record_id) ?? .record_id
+        .table_id = to_string(parsed.table_id) ?? .table_id
+        .event = to_string(parsed.event) ?? .event
       } else {
         # Fallback for plain text Loguru lines:
         # YYYY-MM-DD HH:mm:ss.SSS | LEVEL | service | message | {extra}
@@ -88,21 +96,37 @@ transforms:
       }
 
       .severity_text = .level
+      event_time_nanos = to_unix_timestamp(.timestamp, unit: "nanoseconds") ?? to_unix_timestamp(now(), unit: "nanoseconds")
+
+      resource_attributes = [
+        { "key": "service.name", "value": { "stringValue": .service } },
+        { "key": "service.namespace", "value": { "stringValue": .project_name } },
+        { "key": "deployment.environment", "value": { "stringValue": .deployment_environment } },
+        { "key": "host.name", "value": { "stringValue": .host } }
+      ]
+
+      log_attributes = [
+        { "key": "project.name", "value": { "stringValue": .project_name } },
+        { "key": "project.compose", "value": { "stringValue": .project } },
+        { "key": "stage", "value": { "stringValue": .stage } },
+        { "key": "record_id", "value": { "stringValue": .record_id } },
+        { "key": "table_id", "value": { "stringValue": .table_id } },
+        { "key": "event", "value": { "stringValue": .event } }
+      ]
 
       # Build OTLP JSON envelope expected by Vector opentelemetry sink.
       .resourceLogs = [{
         "resource": {
-          "attributes": [
-            { "key": "service.name", "value": { "stringValue": .service } }
-          ]
+          "attributes": resource_attributes
         },
         "scopeLogs": [{
           "scope": {
             "name": "vector.docker"
           },
           "logRecords": [{
-            "timeUnixNano": to_string(to_unix_timestamp(now(), unit: "nanoseconds")),
+            "timeUnixNano": to_string(event_time_nanos),
             "severityText": .severity_text,
+            "attributes": log_attributes,
             "body": { "stringValue": .log_message }
           }]
         }]

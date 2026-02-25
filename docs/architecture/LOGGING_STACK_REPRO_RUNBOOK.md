@@ -35,7 +35,7 @@ Step 1: Start SigNoz
 - UI:
   - `http://localhost:8080`
 
-Step 2: Start app + Vector
+Step 2: Start app stack
 - From `infra/docker-compose`:
   - `docker compose up -d --build`
 - `vector-agent` is part of this compose and sends to SigNoz collector over `signoz-net`.
@@ -44,7 +44,7 @@ Step 3: Validate health quickly
 - SigNoz containers:
   - `docker ps --format "table {{.Names}}\t{{.Status}}" | Select-String "signoz|NAMES"`
 - Vector ingestion errors (should be empty):
-  - `docker compose logs --since=2m vector-agent | Select-String "Bad Request|HTTP error|Events dropped|Not retriable|ERROR|error"`
+  - `docker compose -f infra/docker-compose/compose.yaml logs --since=2m vector-agent | Select-String "Bad Request|HTTP error|Events dropped|Not retriable|ERROR|error"`
 - Recent logs ingested in ClickHouse:
   - `docker exec signoz-clickhouse clickhouse-client --query "SELECT count() FROM signoz_logs.distributed_logs_v2 WHERE timestamp > now() - INTERVAL 1 MINUTE"`
 

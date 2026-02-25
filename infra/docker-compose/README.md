@@ -44,5 +44,5 @@ Notes
 - Environment variables still work and can override secrets if set.
 - `s8` table selection comes from message `table_id`.
 - `vector-agent` forwards logs to `http://signoz-otel-collector:4318/v1/logs` over shared Docker network `signoz-net`.
-- `vector-agent` is a single host-level collector for all containers in this compose project (no per-service Vector sidecars).
+- `vector-agent` is a single host-level collector for this compose project (no per-service Vector sidecars).
 - Services log to stdout/stderr; they do not share an application log directory in this setup.
