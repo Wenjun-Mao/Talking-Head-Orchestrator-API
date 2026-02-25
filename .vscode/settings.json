@@ -6,6 +6,9 @@
         "docker exec": true,
         "docker rm": true,
         "1m": true,
-        "10s": true
+        "10s": true,
+        "New-Item": true,
+        "Out-Null": true,
+        "Move-Item": true
     }
 }

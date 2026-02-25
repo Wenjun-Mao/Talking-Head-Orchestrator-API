@@ -30,7 +30,7 @@ Why separate stack (recommended)
 
 Can SigNoz run as "another container"?
 - Yes. For this pilot, run SigNoz as additional containers in the same host using a dedicated compose project under `infra/observability`.
-- Vector can then export to SigNoz OTLP endpoint over Docker network.
+- Each project-local Vector can export to SigNoz OTLP endpoint over the published collector port (`4318`).
 
 Phase relationship with shared utilities
 - This plan complements `docs/architecture/SHARED_UTILS_PHASE2_PLAN.md`; it does not replace it.

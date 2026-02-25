@@ -179,14 +179,12 @@ services:
     command: ["--config", "/etc/vector/vector.yaml"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ../observability/vector/vector.yaml:/etc/vector/vector.yaml:ro
+      - ../vector/vector.yaml:/etc/vector/vector.yaml:ro
       - vector-data:/vector-data-dir
     environment:
-      - VECTOR_SIGNOZ_OTLP_HTTP_URI=http://signoz-otel-collector:4318/v1/logs
+      - VECTOR_SIGNOZ_OTLP_HTTP_URI=http://host.docker.internal:4318/v1/logs
       - VECTOR_PROJECT_NAME=talking-head-orchestrator-api
       - VECTOR_DEPLOYMENT_ENV=local
-    networks:
-      - signoz-net
     restart: always
 
 secrets:
@@ -207,9 +205,4 @@ secrets:
 
 volumes:
   vector-data:
-
-networks:
-  signoz-net:
-    external: true
-    name: signoz-net
 

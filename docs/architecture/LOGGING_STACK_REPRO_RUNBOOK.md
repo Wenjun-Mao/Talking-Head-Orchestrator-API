@@ -7,7 +7,7 @@ Purpose
 Final topology (working)
 - App services emit JSON logs to stdout (Loguru).
 - One host-level `vector-agent` tails Docker logs for all services.
-- Vector sends logs to SigNoz OTLP HTTP receiver at `http://signoz-otel-collector:4318/v1/logs`.
+- Vector sends logs to SigNoz OTLP HTTP receiver at `http://host.docker.internal:4318/v1/logs`.
 - SigNoz stack runs from local bundled files in `infra/observability/signoz/*`.
 
 Noise exclusion policy (current)
@@ -22,12 +22,11 @@ Why these choices
 - Single Vector agent (not one per service): lower operational overhead and simpler rollout.
 - Separate infra location (`infra/observability`): clean boundary from business services.
 - Local bundled SigNoz deploy files (not full cloned repo): smaller footprint, stable/pinned config, fewer Windows path issues.
-- Vector on `signoz-net` only: avoids intermittent DNS resolution issues seen with dual-network attachment.
+- Per-project Vector points to SigNoz via collector published OTLP port on host.
 - SigNoz collector started with static config command only: avoids unstable behavior encountered with manager/opamp startup mode in this local setup.
 
 Prerequisites
 - Docker Desktop running.
-- `signoz-net` external network is created by SigNoz compose startup.
 
 Step 1: Start SigNoz
 - From `infra/observability`:
@@ -38,7 +37,7 @@ Step 1: Start SigNoz
 Step 2: Start app stack
 - From `infra/docker-compose`:
   - `docker compose up -d --build`
-- `vector-agent` is part of this compose and sends to SigNoz collector over `signoz-net`.
+- `vector-agent` is part of this compose and sends to SigNoz collector over the published OTLP endpoint.
 
 Step 3: Validate health quickly
 - SigNoz containers:
@@ -57,8 +56,8 @@ Known-good expected behavior
 - `signoz`, `signoz-otel-collector`, `signoz-clickhouse`, `signoz-zookeeper-1` should stay running.
 
 Troubleshooting shortcuts
-- If Vector shows DNS lookup failures for `signoz-otel-collector`:
-  - ensure `vector-agent` is attached to `signoz-net`.
+- If Vector shows connection failures to collector:
+  - ensure SigNoz is up and collector HTTP receiver is published on `4318`.
 - If collector errors mention connection/receiver issues:
   - restart SigNoz via `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`.
   - check collector startup logs contain both:

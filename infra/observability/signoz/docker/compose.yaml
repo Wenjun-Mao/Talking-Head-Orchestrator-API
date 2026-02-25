@@ -1,3 +1,24 @@
+# ─────────────────────────────────────────────────────────────────────
+# Shared SigNoz observability stack
+#
+# Deployment model: standalone, multi-project, multi-host
+#   • All published ports bind to 0.0.0.0 so the stack is reachable from
+#     the host itself (localhost), other containers, LAN peers, and
+#     reverse-proxied VPS clients via nginx/SSL.
+#   • Each project runs its own Vector (or OTLP) agent and ships logs
+#     to the collector endpoints below.
+#
+# Published endpoints (external)
+#   UI            0.0.0.0:8080   →  SigNoz web dashboard
+#   OTLP gRPC     0.0.0.0:4317   →  traces / metrics / logs
+#   OTLP HTTP     0.0.0.0:4318   →  traces / metrics / logs
+#   Health        0.0.0.0:13133  →  otel-collector /healthcheck
+#
+# Internal-only (signoz-net)
+#   ClickHouse    9000 / 8123
+#   ZooKeeper     2181
+# ─────────────────────────────────────────────────────────────────────
+
 x-common: &common
   networks:
     - signoz-net
@@ -115,8 +136,8 @@ services:
     command:
       - --config=/root/config/prometheus.yml
     ports:
-      - "8080:8080" # signoz port
-    #   - "6060:6060"     # pprof port
+      - "0.0.0.0:8080:8080"   # UI — reachable from LAN / nginx
+    #   - "6060:6060"           # pprof port
     volumes:
       - ../common/signoz/prometheus.yml:/root/config/prometheus.yml
       - ../common/dashboards:/root/config/dashboards
@@ -153,9 +174,10 @@ services:
       - OTEL_RESOURCE_ATTRIBUTES=host.name=signoz-host,os.type=linux
       - LOW_CARDINAL_EXCEPTION_GROUPING=false
     ports:
-      # - "1777:1777"     # pprof extension
-      - "4317:4317" # OTLP gRPC receiver
-      - "4318:4318" # OTLP HTTP receiver
+      # - "1777:1777"           # pprof extension
+      - "0.0.0.0:4317:4317"   # OTLP gRPC  — traces/metrics/logs
+      - "0.0.0.0:4318:4318"   # OTLP HTTP  — traces/metrics/logs
+      - "0.0.0.0:13133:13133" # health check — nginx upstream probe
     depends_on:
       signoz:
         condition: service_healthy
