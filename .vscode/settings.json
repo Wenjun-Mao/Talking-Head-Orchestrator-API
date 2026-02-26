@@ -9,6 +9,11 @@
         "10s": true,
         "New-Item": true,
         "Out-Null": true,
-        "Move-Item": true
+        "Move-Item": true,
+        "git filter-repo": true,
+        "git clone": true,
+        "git remote": true,
+        "git rm": true,
+        "git check-ignore": true
     }
 }

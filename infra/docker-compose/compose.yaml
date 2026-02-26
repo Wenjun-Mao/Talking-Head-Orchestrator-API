@@ -1,3 +1,5 @@
+name: Talking-Head-Orchestrator-API
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -176,13 +178,19 @@ services:
 
   vector-agent:
     image: timberio/vector:0.44.0-debian
-    command: ["--config", "/etc/vector/vector.yaml"]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        export VECTOR_SIGNOZ_OTLP_HTTP_URI=$$(cat /run/secrets/signoz_otlp_http_url)
+        exec vector --config /etc/vector/vector.yaml
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ../vector/vector.yaml:/etc/vector/vector.yaml:ro
       - vector-data:/vector-data-dir
+    secrets:
+      - signoz_otlp_http_url
     environment:
-      - VECTOR_SIGNOZ_OTLP_HTTP_URI=http://host.docker.internal:4318/v1/logs
       - VECTOR_PROJECT_NAME=talking-head-orchestrator-api
       - VECTOR_DEPLOYMENT_ENV=local
     restart: always
@@ -202,6 +210,8 @@ secrets:
     file: ./secrets/debug_log_payload
   chevereto_api_key:
     file: ./secrets/chevereto_api_key
+  signoz_otlp_http_url:
+    file: ./secrets/signoz_otlp_http_url
 
 volumes:
   vector-data:

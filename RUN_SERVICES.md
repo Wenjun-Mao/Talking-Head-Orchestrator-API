@@ -3,8 +3,9 @@ Quick service launch guide
 Start everything (top 2 commands)
 - Full service stack:
   - `docker compose -f infra/docker-compose/compose.yaml up -d --build`
-- Full SigNoz stack:
-  - `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml up -d --remove-orphans`
+- Full SigNoz stack (from signoz-stack repo):
+  - `docker compose -p signoz -f docker/compose.yaml up -d --remove-orphans`
+  - See: https://github.com/Wenjun-Mao/signoz-stack
 
 Recommended startup order
 - Start SigNoz first, then start the service stack.
@@ -20,8 +21,8 @@ Daily operations
 Stop operations
 - Stop service stack:
   - `docker compose -f infra/docker-compose/compose.yaml down`
-- Stop SigNoz stack:
-  - `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml down`
+- Stop SigNoz stack (from signoz-stack repo):
+  - `docker compose -p signoz -f docker/compose.yaml down`
 
 Smoke check (webhook + observability)
 - Send webhook using Bruno payload:

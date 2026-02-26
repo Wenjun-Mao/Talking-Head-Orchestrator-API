@@ -6,13 +6,14 @@ Purpose
 
 Conventions
 - Run from repository root unless noted.
-- SigNoz compose file: `infra/observability/signoz/docker/compose.yaml`
+- SigNoz lives in a separate repo: https://github.com/Wenjun-Mao/signoz-stack
+- SigNoz compose commands below assume you are in the signoz-stack repo root.
 - App compose file: `infra/docker-compose/compose.yaml`
 - SigNoz compose project name is fixed as `signoz`.
 
 Start (keep existing logs/data)
-1) Start SigNoz first:
-- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml up -d --remove-orphans`
+1) Start SigNoz first (from signoz-stack repo):
+- `docker compose -p signoz -f docker/compose.yaml up -d --remove-orphans`
 
 2) Start app stack:
 - `docker compose -f infra/docker-compose/compose.yaml up -d --build`
@@ -21,8 +22,8 @@ Stop (keep existing logs/data)
 1) Stop app stack:
 - `docker compose -f infra/docker-compose/compose.yaml down`
 
-2) Stop SigNoz stack (volumes preserved):
-- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml down`
+2) Stop SigNoz stack (volumes preserved, from signoz-stack repo):
+- `docker compose -p signoz -f docker/compose.yaml down`
 
 RabbitMQ-only restart note
 - If you recreate only RabbitMQ, some workers may reconnect before their queues are re-declared and emit temporary `queue not_found` churn.
@@ -37,14 +38,14 @@ Warning
 1) Stop app stack:
 - `docker compose -f infra/docker-compose/compose.yaml down`
 
-2) Stop SigNoz and delete its volumes:
-- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml down -v`
+2) Stop SigNoz and delete its volumes (from signoz-stack repo):
+- `docker compose -p signoz -f docker/compose.yaml down -v`
 
 3) (Optional) remove Vector local disk buffer volume:
 - `docker compose -f infra/docker-compose/compose.yaml down -v`
 
-4) Start fresh:
-- `docker compose -p signoz -f infra/observability/signoz/docker/compose.yaml up -d --remove-orphans`
+4) Start fresh (SigNoz from signoz-stack repo, app from this repo):
+- `docker compose -p signoz -f docker/compose.yaml up -d --remove-orphans`
 - `docker compose -f infra/docker-compose/compose.yaml up -d --build`
 
 Health checks

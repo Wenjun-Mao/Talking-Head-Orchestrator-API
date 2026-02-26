@@ -17,11 +17,10 @@ Scope decisions (confirmed)
 - Alerting: implement a standard baseline set for worker pipelines.
 
 Where SigNoz should live
-- Do NOT place SigNoz under `services/`.
-- Place observability infrastructure under `infra/observability/`.
+- SigNoz has been extracted to its own repo: https://github.com/Wenjun-Mao/signoz-stack
 - Keep it as a separate compose stack from the app pipeline compose:
   - app pipeline: `infra/docker-compose/compose.yaml`
-  - observability stack: `infra/observability/signoz/docker/compose.yaml`
+  - SigNoz: separate repo, `docker/compose.yaml`
 
 Why separate stack (recommended)
 - Clear ownership boundary: app services vs platform tooling.

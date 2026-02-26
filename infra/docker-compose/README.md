@@ -13,8 +13,8 @@ Current services
 - vector-agent (ships container logs to SigNoz OTLP endpoint)
 
 Quick start
-0) Start SigNoz first:
-	- `docker compose -p signoz -f ../observability/signoz/docker/compose.yaml up -d --remove-orphans`
+0) Start SigNoz first (from signoz-stack repo: https://github.com/Wenjun-Mao/signoz-stack):
+	- `docker compose -p signoz -f docker/compose.yaml up -d --remove-orphans`
 1) Create secret files under infra/docker-compose/secrets:
 	- nocodb_api_key
 	- nocodb_base_url
@@ -23,6 +23,7 @@ Quick start
 	- tts_api_token
 	- chevereto_api_key
 	- debug_log_payload
+	- signoz_otlp_http_url (default: `http://host.docker.internal:4318/v1/logs`)
 2) Run from this folder:
 	docker compose up -d --build
 
@@ -43,6 +44,6 @@ Example
 Notes
 - Environment variables still work and can override secrets if set.
 - `s8` table selection comes from message `table_id`.
-- `vector-agent` forwards logs to `http://host.docker.internal:4318/v1/logs`.
+- `vector-agent` forwards logs to the SigNoz OTLP endpoint configured in `secrets/signoz_otlp_http_url`.
 - `vector-agent` is a single host-level collector for this compose project (no per-service Vector sidecars).
 - Services log to stdout/stderr; they do not share an application log directory in this setup.

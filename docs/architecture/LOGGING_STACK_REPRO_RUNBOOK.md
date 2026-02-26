@@ -7,8 +7,8 @@ Purpose
 Final topology (working)
 - App services emit JSON logs to stdout (Loguru).
 - One host-level `vector-agent` tails Docker logs for all services.
-- Vector sends logs to SigNoz OTLP HTTP receiver at `http://host.docker.internal:4318/v1/logs`.
-- SigNoz stack runs from local bundled files in `infra/observability/signoz/*`.
+- Vector sends logs to SigNoz OTLP HTTP receiver (endpoint configured via `secrets/signoz_otlp_http_url`).
+- SigNoz stack lives in a separate repo: https://github.com/Wenjun-Mao/signoz-stack
 
 Noise exclusion policy (current)
 - Vector excludes infrastructure noise before shipping to SigNoz.
@@ -20,17 +20,16 @@ Noise exclusion policy (current)
 
 Why these choices
 - Single Vector agent (not one per service): lower operational overhead and simpler rollout.
-- Separate infra location (`infra/observability`): clean boundary from business services.
-- Local bundled SigNoz deploy files (not full cloned repo): smaller footprint, stable/pinned config, fewer Windows path issues.
-- Per-project Vector points to SigNoz via collector published OTLP port on host.
+- SigNoz extracted to its own repo: clean ownership, shared across projects.
+- Per-project Vector points to SigNoz via configurable OTLP endpoint (`secrets/signoz_otlp_http_url`).
 - SigNoz collector started with static config command only: avoids unstable behavior encountered with manager/opamp startup mode in this local setup.
 
 Prerequisites
 - Docker Desktop running.
 
 Step 1: Start SigNoz
-- From `infra/observability`:
-  - `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`
+- From the signoz-stack repo (https://github.com/Wenjun-Mao/signoz-stack):
+  - `docker compose -p signoz -f docker/compose.yaml up -d --remove-orphans`
 - UI:
   - `http://localhost:8080`
 
@@ -59,7 +58,7 @@ Troubleshooting shortcuts
 - If Vector shows connection failures to collector:
   - ensure SigNoz is up and collector HTTP receiver is published on `4318`.
 - If collector errors mention connection/receiver issues:
-  - restart SigNoz via `docker compose -p signoz -f ./signoz/docker/compose.yaml up -d --remove-orphans`.
+  - restart SigNoz from signoz-stack repo: `docker compose -p signoz -f docker/compose.yaml up -d --remove-orphans`.
   - check collector startup logs contain both:
     - `Starting GRPC server ... [::]:4317`
     - `Starting HTTP server ... [::]:4318`
